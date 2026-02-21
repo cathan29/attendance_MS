@@ -1,0 +1,21 @@
+<?php
+
+
+$host = 'localhost';
+$dbname = 'attendance_MS';
+$username = 'root';
+$password = '';
+
+try {
+    //pdo intance
+    $pdo = new PDO('mysql:host=$host;dbname=$dbname;charset=utf8', $username, $password);
+
+    //pdo error handling exception
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    //Default fetch
+    $pdo->serAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+
+} catch(PDOException $e ) {
+    die("Database Connection Failed" . $e->getMessage()) . "CHECK IF XAMPP SQL IS RUNNING";
+}
+?>
