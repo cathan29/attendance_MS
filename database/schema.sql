@@ -1,39 +1,51 @@
-CREATE DATABASE IF NOT EXISTS attendance_MS;
-USE attendance_MS;
+-- Create the database if it doesn't exist
+CREATE DATABASE IF NOT EXISTS `attendance_MS`;
+USE `attendance_MS`;
 
---TABLE 1: users
-CREATE TABLE users(
-    employee_id VARCHAR(50) PRIMARY KEY,
-    first_name VARCHAR(100) NOT NULL,
-    last_name VARCHAR(100) NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL,
-    role ENUM('admin', 'teacher') DEFAULT 'teacher',
-    status ENUM('active', 'inactive') DEFAULT 'active',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+-- --------------------------------------------------------
+-- Table 1: users (Stores Admins and Teachers)
+-- --------------------------------------------------------
+CREATE TABLE `users` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `employee_id` varchar(50) NOT NULL,
+  `first_name` varchar(100) NOT NULL,
+  `last_name` varchar(100) NOT NULL,
+  `password` varchar(255) NOT NULL, 
+  `role` enum('admin','teacher') NOT NULL,
+  `status` enum('active','inactive') DEFAULT 'active',
+  `created_at` timestamp DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `employee_id` (`employee_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
---TABLE 2: Students(DATA LANG!!!)
-CREATE TABLE students (
-    student_id VARCHAR(50) PRIMARY KEY,
-    first_name VARCHAR(100) NOT NULL,
-    last_name VARCHAR(100) NOT NULL,
-    course_section VARCHAR(100) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+-- --------------------------------------------------------
+-- Table 2: students (Stores the Master Roster)
+-- --------------------------------------------------------
+-- UPDATE: Removed auto-increment. The actual student_id is now the Primary Key.
+CREATE TABLE `students` (
+  `student_id` varchar(50) NOT NULL,
+  `first_name` varchar(100) NOT NULL,
+  `last_name` varchar(100) NOT NULL,
+  `section` varchar(50) NOT NULL,
+  `created_at` timestamp DEFAULT current_timestamp(),
+  PRIMARY KEY (`student_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
---TABLE 3: Attendance 
-CREATE TABLE attendance (
-    log_id INT AUTO_INCREMENT PRIMARY KEY,
-    student_id VARCHAR(50) NOT NULL,
-    teacher_id VARCHAR(50) NOT NULL,
-    attendance_date DATE NOT NULL,
-    status ENUM('present', 'late', 'absent') NOT NULL,
-    recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
-
-    FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE,
-    FOREIGN KEY (teacher_id) REFERENCES users(employee_id) ON DELETE CASCADE,
-
-    UNIQUE KEY unique_daily_,attendance (student_id, attendance_date)
-);
+-- --------------------------------------------------------
+-- Table 3: attendance (Stores the Daily Records)
+-- --------------------------------------------------------
+CREATE TABLE `attendance` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `student_id` varchar(50) NOT NULL,
+  `teacher_id` varchar(50) NOT NULL,
+  `attendance_date` date NOT NULL,
+  `status` enum('Present','Late','Absent') NOT NULL,
+  `remarks` text DEFAULT NULL,
+  `created_at` timestamp DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `fk_student` (`student_id`),
+  KEY `fk_teacher` (`teacher_id`),
+  CONSTRAINT `fk_student` FOREIGN KEY (`student_id`) REFERENCES `students` (`student_id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_teacher` FOREIGN KEY (`teacher_id`) REFERENCES `users` (`employee_id`) ON DELETE CASCADE,
+  UNIQUE KEY `unique_attendance_per_day` (`student_id`,`attendance_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
