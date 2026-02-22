@@ -89,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     <form action="login.php" method="POST">
         <div class="mb-3">
-            <label for="employee_id" class="form-label fw-bold">Employee ID</label>
+            <label for="employee_id" class="form-label fw-bold">Employee ID mhjhjhjghjghjg</label>
             <input type="text" class="form-control" id="employee_id" name="employee_id" placeholder="e.g. T-1029" required>
         </div>
         <div class="mb-4">
