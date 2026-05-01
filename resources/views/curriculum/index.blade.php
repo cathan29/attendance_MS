@@ -73,6 +73,13 @@
         <h2>Teacher Loads</h2>
         <span class="chip-light">{{ $assignments->count() }} assignments</span>
     </div>
+    <form method="GET" action="{{ route('admin.curriculum.index') }}" class="search-bar">
+        <input class="form-control" name="q" value="{{ $search }}" placeholder="Search teacher, subject, strand, section, school year, or semester">
+        <button class="btn btn-outline-primary">Search</button>
+        @if($search !== '')
+            <a class="btn btn-outline-primary" href="{{ route('admin.curriculum.index') }}">Clear</a>
+        @endif
+    </form>
     <div class="table-responsive">
         <table class="table align-middle">
             <thead><tr><th>Teacher</th><th>Subject</th><th>Class</th><th>Term</th><th></th></tr></thead>

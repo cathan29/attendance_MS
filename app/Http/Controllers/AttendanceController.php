@@ -132,10 +132,27 @@ class AttendanceController extends Controller
 
     private function filteredAttendance(Request $request)
     {
+        $search = trim((string) $request->query('q', ''));
+
         return Attendance::query()
             ->when($request->filled('date_from'), fn ($query) => $query->whereDate('attendance_date', '>=', $request->query('date_from')))
             ->when($request->filled('date_to'), fn ($query) => $query->whereDate('attendance_date', '<=', $request->query('date_to')))
             ->when($request->filled('status'), fn ($query) => $query->where('status', $request->query('status')))
-            ->when($request->filled('subject_id'), fn ($query) => $query->where('subject_id', $request->integer('subject_id')));
+            ->when($request->filled('subject_id'), fn ($query) => $query->where('subject_id', $request->integer('subject_id')))
+            ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
+                $query->where('student_id', 'like', "%{$search}%")
+                    ->orWhere('status', 'like', "%{$search}%")
+                    ->orWhere('remarks', 'like', "%{$search}%")
+                    ->orWhereHas('student', fn ($student) => $student
+                        ->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('year_level', 'like', "%{$search}%")
+                        ->orWhere('section', 'like', "%{$search}%"))
+                    ->orWhereHas('subject', fn ($subject) => $subject->where('subject_name', 'like', "%{$search}%"))
+                    ->orWhereHas('teacher', fn ($teacher) => $teacher
+                        ->where('employee_id', 'like', "%{$search}%")
+                        ->orWhere('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%"));
+            }));
     }
 }

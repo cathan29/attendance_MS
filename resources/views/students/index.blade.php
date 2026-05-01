@@ -28,6 +28,13 @@
     </form>
 </section>
 <section class="panel">
+    <form method="GET" action="{{ route('admin.students.index') }}" class="search-bar">
+        <input class="form-control" name="q" value="{{ $search }}" placeholder="Search student ID, name, strand, grade, or section">
+        <button class="btn btn-outline-primary">Search</button>
+        @if($search !== '')
+            <a class="btn btn-outline-primary" href="{{ route('admin.students.index') }}">Clear</a>
+        @endif
+    </form>
     <div class="table-responsive">
         <table class="table align-middle">
             <thead><tr><th>ID</th><th>Name</th><th>Strand</th><th>Year/Section</th><th></th></tr></thead>

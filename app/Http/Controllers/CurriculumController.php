@@ -16,8 +16,22 @@ class CurriculumController extends Controller
 
     public function index(): View
     {
+        $search = trim((string) request()->query('q', ''));
+
         return view('curriculum.index', [
             'assignments' => ClassAssignment::with(['teacher', 'subject', 'strand'])
+                ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
+                    $query->where('year_level', 'like', "%{$search}%")
+                        ->orWhere('section', 'like', "%{$search}%")
+                        ->orWhere('school_year', 'like', "%{$search}%")
+                        ->orWhere('semester', 'like', "%{$search}%")
+                        ->orWhereHas('teacher', fn ($teacher) => $teacher
+                            ->where('employee_id', 'like', "%{$search}%")
+                            ->orWhere('first_name', 'like', "%{$search}%")
+                            ->orWhere('last_name', 'like', "%{$search}%"))
+                        ->orWhereHas('subject', fn ($subject) => $subject->where('subject_name', 'like', "%{$search}%"))
+                        ->orWhereHas('strand', fn ($strand) => $strand->where('strand_name', 'like', "%{$search}%"));
+                }))
                 ->orderBy('year_level')
                 ->orderBy('section')
                 ->latest()
@@ -26,6 +40,7 @@ class CurriculumController extends Controller
             'subjects' => SubjectModel::orderBy('subject_name')->get(),
             'strands' => Strand::orderBy('strand_name')->get(),
             'sections' => self::SECTIONS,
+            'search' => $search,
         ]);
     }
 

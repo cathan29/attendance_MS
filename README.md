@@ -33,3 +33,18 @@ The old plain-PHP/XAMPP version was preserved in `legacy_php` so the previous wo
 * Password: `Admin@123`
 
 Change the default password after first login.
+
+## Seeded Teacher Logins
+
+Teacher accounts use auto-generated IDs in this format:
+
+`CA-YYYY###`
+
+Sample seeded accounts:
+
+* `CA-2026001` / `Cipher@1001`
+* `CA-2026002` / `Cipher@1002`
+* `CA-2026003` / `Cipher@1003`
+* `CA-2026004` / `Cipher@1004`
+
+Teachers are required to update their email and password on first login.

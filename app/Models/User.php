@@ -23,9 +23,11 @@ class User extends Authenticatable
         'first_name',
         'middle_name',
         'last_name',
+        'email',
         'password',
         'role',
         'status',
+        'must_update_credentials',
     ];
 
     /**
@@ -47,6 +49,7 @@ class User extends Authenticatable
     {
         return [
             'password' => 'hashed',
+            'must_update_credentials' => 'boolean',
         ];
     }
 

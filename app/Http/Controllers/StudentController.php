@@ -12,12 +12,27 @@ class StudentController extends Controller
 {
     private const SECTIONS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
-    public function index(): View
+    public function index(Request $request): View
     {
+        $search = trim((string) $request->query('q', ''));
+
         return view('students.index', [
-            'students' => Student::with('strand')->orderBy('year_level')->orderBy('section')->orderBy('last_name')->get(),
+            'students' => Student::with('strand')
+                ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
+                    $query->where('student_id', 'like', "%{$search}%")
+                        ->orWhere('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('year_level', 'like', "%{$search}%")
+                        ->orWhere('section', 'like', "%{$search}%")
+                        ->orWhereHas('strand', fn ($strand) => $strand->where('strand_name', 'like', "%{$search}%"));
+                }))
+                ->orderBy('year_level')
+                ->orderBy('section')
+                ->orderBy('last_name')
+                ->get(),
             'strands' => Strand::orderBy('strand_name')->get(),
             'sections' => self::SECTIONS,
+            'search' => $search,
         ]);
     }
 

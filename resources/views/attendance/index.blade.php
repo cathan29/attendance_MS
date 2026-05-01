@@ -9,11 +9,15 @@
 </div>
 <section class="panel mb-4">
     <form method="GET" action="{{ route('admin.attendance.index') }}" class="action-bar">
+        <div class="col-md-4"><label class="form-label">Search</label><input class="form-control" name="q" value="{{ request('q') }}" placeholder="Student, teacher, subject, remarks"></div>
         <div><label class="form-label">From</label><input type="date" class="form-control" name="date_from" value="{{ request('date_from') }}"></div>
         <div><label class="form-label">To</label><input type="date" class="form-control" name="date_to" value="{{ request('date_to') }}"></div>
         <div><label class="form-label">Status</label><select class="form-select" name="status"><option value="">All</option>@foreach(['Present', 'Late', 'Absent'] as $status)<option @selected(request('status') === $status)>{{ $status }}</option>@endforeach</select></div>
         <div><label class="form-label">Subject</label><select class="form-select" name="subject_id"><option value="">All</option>@foreach($subjects as $subject)<option value="{{ $subject->id }}" @selected(request('subject_id') == $subject->id)>{{ $subject->subject_name }}</option>@endforeach</select></div>
         <button class="btn btn-primary">Filter</button>
+        @if(request()->hasAny(['q', 'date_from', 'date_to', 'status', 'subject_id']))
+            <a class="btn btn-outline-primary" href="{{ route('admin.attendance.index') }}">Clear</a>
+        @endif
     </form>
 </section>
 <section class="panel">

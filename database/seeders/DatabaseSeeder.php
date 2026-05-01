@@ -25,23 +25,35 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('Admin@123'),
             'role' => 'admin',
             'status' => 'active',
+            'email' => 'admin@cipheracademy.edu',
+            'must_update_credentials' => false,
         ]);
 
+        $teacherYear = now()->year;
         $teachers = collect([
-            ['T-1001', 'Maria', 'Santos'],
-            ['T-1002', 'Jose', 'Reyes'],
-            ['T-1003', 'Ana', 'Cruz'],
-            ['T-1004', 'Ramon', 'Garcia'],
-        ])->map(fn ($teacher) => User::updateOrCreate([
-            'employee_id' => $teacher[0],
-        ], [
-            'first_name' => $teacher[1],
-            'middle_name' => null,
-            'last_name' => $teacher[2],
-            'password' => Hash::make('Teacher@123'),
-            'role' => 'teacher',
-            'status' => 'active',
-        ]))->values();
+            ["CA-{$teacherYear}001", 'Maria', 'Santos', 'maria.santos@cipheracademy.edu', 'Cipher@1001'],
+            ["CA-{$teacherYear}002", 'Jose', 'Reyes', 'jose.reyes@cipheracademy.edu', 'Cipher@1002'],
+            ["CA-{$teacherYear}003", 'Ana', 'Cruz', 'ana.cruz@cipheracademy.edu', 'Cipher@1003'],
+            ["CA-{$teacherYear}004", 'Ramon', 'Garcia', 'ramon.garcia@cipheracademy.edu', 'Cipher@1004'],
+        ])->map(function ($teacher) {
+            $model = User::where('email', $teacher[3])
+                ->orWhere('employee_id', $teacher[0])
+                ->first() ?? new User();
+
+            $model->fill([
+                'employee_id' => $teacher[0],
+                'first_name' => $teacher[1],
+                'middle_name' => null,
+                'last_name' => $teacher[2],
+                'password' => Hash::make($teacher[4]),
+                'role' => 'teacher',
+                'status' => 'active',
+                'email' => $teacher[3],
+                'must_update_credentials' => true,
+            ])->save();
+
+            return $model;
+        })->values();
 
         $strands = collect(['ABM', 'GAS', 'HUMSS', 'STEM', 'TVL'])->mapWithKeys(function ($strand) {
             return [$strand => Strand::firstOrCreate(['strand_name' => $strand])];
