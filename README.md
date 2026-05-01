@@ -1,6 +1,6 @@
-# Attendance Monitoring System
+# Cipher Academy
 
-This project is now a Laravel attendance management system at the repository root.
+This project is now a Laravel attendance management system for Cipher Academy.
 
 The old plain-PHP/XAMPP version was preserved in `legacy_php` so the previous work is still available for reference.
 

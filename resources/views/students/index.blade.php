@@ -16,7 +16,14 @@
         <div class="col-md-3"><label class="form-label">Last Name</label><input class="form-control" name="last_name" required></div>
         <div class="col-md-3"><label class="form-label">Strand</label><select class="form-select" name="strand_id" required>@foreach($strands as $strand)<option value="{{ $strand->id }}">{{ $strand->strand_name }}</option>@endforeach</select></div>
         <div class="col-md-2"><label class="form-label">Year</label><select class="form-select" name="year_level"><option>11</option><option>12</option></select></div>
-        <div class="col-md-4"><label class="form-label">Section</label><input class="form-control" name="section"></div>
+        <div class="col-md-4">
+            <label class="form-label">Section</label>
+            <select class="form-select" name="section" required>
+                @foreach($sections as $section)
+                    <option value="{{ $section }}">{{ $section }}</option>
+                @endforeach
+            </select>
+        </div>
         <div class="col-md-3 d-flex align-items-end"><button class="btn btn-primary w-100">Save Student</button></div>
     </form>
 </section>

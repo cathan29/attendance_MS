@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use App\Models\Attendance;
+use App\Models\ClassAssignment;
 use App\Models\Strand;
 use App\Models\Student;
 use App\Models\SubjectModel;
@@ -77,6 +78,21 @@ class DatabaseSeeder extends Seeder
             }
         }
 
+        $assignments = collect();
+        foreach ($sections as $sectionIndex => [$year, $strandName, $section]) {
+            foreach ($subjects->values() as $subjectIndex => $subject) {
+                $assignments->push(ClassAssignment::updateOrCreate([
+                    'teacher_id' => $teachers[($sectionIndex + $subjectIndex) % $teachers->count()]->id,
+                    'subject_id' => $subject->id,
+                    'strand_id' => $strands[$strandName]->id,
+                    'year_level' => $year,
+                    'section' => $section,
+                    'school_year' => now()->year . '-' . now()->addYear()->year,
+                    'semester' => '1st Semester',
+                ]));
+            }
+        }
+
         $period = CarbonPeriod::create(now()->subDays(27)->startOfDay(), now()->startOfDay());
         foreach ($period as $date) {
             if ($date->isWeekend()) {
@@ -101,7 +117,12 @@ class DatabaseSeeder extends Seeder
                         'attendance_date' => $date->toDateString(),
                         'subject_id' => $subject->id,
                     ], [
-                        'teacher_id' => $teachers[($subjectIndex + $index) % $teachers->count()]->id,
+                        'teacher_id' => $assignments
+                            ->first(fn ($assignment) => $assignment->subject_id === $subject->id
+                                && $assignment->strand_id === $student->strand_id
+                                && $assignment->year_level === $student->year_level
+                                && $assignment->section === $student->section)
+                            ?->teacher_id ?? $teachers[($subjectIndex + $index) % $teachers->count()]->id,
                         'status' => $status,
                         'remarks' => $status === 'Present' ? null : ($status === 'Late' ? 'Arrived after the bell.' : 'Needs follow-up.'),
                     ]);

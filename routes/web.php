@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CurriculumController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\StudentController;
@@ -21,6 +22,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/dashboard', [DashboardController::class, 'admin'])->name('dashboard');
     Route::resource('students', StudentController::class)->only(['index', 'store', 'destroy']);
     Route::resource('teachers', TeacherController::class)->only(['index', 'store', 'destroy']);
+    Route::resource('curriculum', CurriculumController::class)->only(['index', 'store', 'destroy']);
     Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
     Route::get('/attendance/export', [AttendanceController::class, 'export'])->name('attendance.export');
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');

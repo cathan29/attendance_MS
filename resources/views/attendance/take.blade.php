@@ -8,19 +8,32 @@
 </div>
 <section class="panel mb-4">
     <form method="GET" action="{{ route('teacher.attendance.create') }}" class="action-bar">
-        <div><label class="form-label">Subject</label><select class="form-select" name="subject_id">@foreach($subjects as $subject)<option value="{{ $subject->id }}" @selected($subjectId === $subject->id)>{{ $subject->subject_name }}</option>@endforeach</select></div>
+        <div class="col-md-6">
+            <label class="form-label">Assigned Class</label>
+            <select class="form-select" name="assignment_id" required>
+                @foreach($assignments as $item)
+                    <option value="{{ $item->id }}" @selected($assignmentId === $item->id)>
+                        {{ $item->subject->subject_name }} / Grade {{ $item->year_level }} {{ $item->strand->strand_name }}-{{ $item->section }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
         <div><label class="form-label">Date</label><input type="date" class="form-control" name="attendance_date" value="{{ $attendanceDate }}"></div>
-        <div><label class="form-label">Strand</label><select class="form-select" name="strand_id"><option value="">All</option>@foreach($strands as $strand)<option value="{{ $strand->id }}" @selected(request('strand_id') == $strand->id)>{{ $strand->strand_name }}</option>@endforeach</select></div>
-        <div><label class="form-label">Year</label><select class="form-select" name="year_level"><option value="">All</option><option @selected(request('year_level') === '11')>11</option><option @selected(request('year_level') === '12')>12</option></select></div>
-        <div><label class="form-label">Section</label><input class="form-control" name="section" value="{{ request('section') }}"></div>
         <button class="btn btn-outline-primary">Load Class</button>
     </form>
 </section>
 <section class="panel">
     <form method="POST" action="{{ route('teacher.attendance.store') }}">
         @csrf
+        <input type="hidden" name="assignment_id" value="{{ $assignmentId }}">
         <input type="hidden" name="subject_id" value="{{ $subjectId }}">
         <input type="hidden" name="attendance_date" value="{{ $attendanceDate }}">
+        @if($assignment)
+            <div class="section-title">
+                <h2>{{ $assignment->subject->subject_name }}</h2>
+                <span class="chip-light">Grade {{ $assignment->year_level }} {{ $assignment->strand->strand_name }}-{{ $assignment->section }}</span>
+            </div>
+        @endif
         <div class="table-responsive">
             <table class="table align-middle">
                 <thead><tr><th>Student</th><th class="attendance-options">Present</th><th class="attendance-options">Late</th><th class="attendance-options">Absent</th><th class="remarks-cell">Remarks</th></tr></thead>
@@ -36,12 +49,12 @@
                         <td><input class="form-control" name="remarks[{{ $student->student_id }}]" value="{{ $saved->remarks ?? '' }}"></td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="text-center empty-state py-4">No students match this filter.</td></tr>
+                    <tr><td colspan="5" class="text-center empty-state py-4">No assigned students found. Ask the admin to set your curriculum load first.</td></tr>
                 @endforelse
                 </tbody>
             </table>
         </div>
-        <button class="btn btn-primary" @disabled($students->isEmpty() || !$subjectId)>Save Attendance</button>
+        <button class="btn btn-primary" @disabled($students->isEmpty() || !$subjectId || !$assignment)>Save Attendance</button>
     </form>
 </section>
 @endsection

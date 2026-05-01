@@ -4,10 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0f172a">
-    <title>{{ $title ?? 'Attendance MS' }}</title>
+    <title>{{ $title ?? 'Cipher Academy' }}</title>
+    <link rel="icon" type="image/png" href="{{ asset('images/school_logo.png') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body>
@@ -15,9 +16,9 @@
     @php($role = auth()->user()->role)
     <aside class="sidebar">
         <a class="brand" href="{{ auth()->user()->role === 'admin' ? route('admin.dashboard') : route('teacher.dashboard') }}">
-            <span class="brand-mark">A</span>
+            <span class="brand-mark"><img src="{{ asset('images/school_logo.png') }}" alt="Cipher Academy logo"></span>
             <span>
-                <strong>Attendance MS</strong>
+                <strong>Cipher Academy</strong>
                 <small>{{ ucfirst($role) }} workspace</small>
             </span>
         </a>
@@ -27,6 +28,7 @@
                 <a class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}" href="{{ route('admin.dashboard') }}"><span>Dashboard</span></a>
                 <a class="{{ request()->routeIs('admin.students.*') ? 'active' : '' }}" href="{{ route('admin.students.index') }}"><span>Students</span></a>
                 <a class="{{ request()->routeIs('admin.teachers.*') ? 'active' : '' }}" href="{{ route('admin.teachers.index') }}"><span>Teachers</span></a>
+                <a class="{{ request()->routeIs('admin.curriculum.*') ? 'active' : '' }}" href="{{ route('admin.curriculum.index') }}"><span>Curriculum</span></a>
                 <a class="{{ request()->routeIs('admin.attendance.*') ? 'active' : '' }}" href="{{ route('admin.attendance.index') }}"><span>Attendance</span></a>
                 <a class="{{ request()->routeIs('admin.reports.*') ? 'active' : '' }}" href="{{ route('admin.reports.index') }}"><span>Reports</span></a>
             @else

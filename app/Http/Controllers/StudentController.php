@@ -10,11 +10,14 @@ use Illuminate\View\View;
 
 class StudentController extends Controller
 {
+    private const SECTIONS = ['A', 'B', 'C', 'D', 'E', 'F'];
+
     public function index(): View
     {
         return view('students.index', [
             'students' => Student::with('strand')->orderBy('year_level')->orderBy('section')->orderBy('last_name')->get(),
             'strands' => Strand::orderBy('strand_name')->get(),
+            'sections' => self::SECTIONS,
         ]);
     }
 
@@ -27,7 +30,7 @@ class StudentController extends Controller
             'last_name' => ['required', 'string', 'max:100'],
             'strand_id' => ['required', 'exists:strands,id'],
             'year_level' => ['required', 'in:11,12'],
-            'section' => ['nullable', 'string', 'max:50'],
+            'section' => ['required', 'in:' . implode(',', self::SECTIONS)],
         ]);
 
         Student::updateOrCreate(['student_id' => $data['student_id']], $data);

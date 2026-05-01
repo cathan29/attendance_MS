@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Attendance;
+use App\Models\ClassAssignment;
 use App\Models\Strand;
 use App\Models\Student;
 use App\Models\SubjectModel;
@@ -17,29 +18,37 @@ class AttendanceController extends Controller
 {
     public function create(Request $request): View
     {
-        $subjects = SubjectModel::orderBy('subject_name')->get();
-        $strands = Strand::orderBy('strand_name')->get();
-        $subjectId = (int) $request->query('subject_id', $subjects->first()->id ?? 0);
+        $assignments = ClassAssignment::with(['subject', 'strand'])
+            ->where('teacher_id', Auth::id())
+            ->orderBy('year_level')
+            ->orderBy('section')
+            ->get();
+        $assignmentId = (int) $request->query('assignment_id', $assignments->first()->id ?? 0);
+        $assignment = $assignments->firstWhere('id', $assignmentId);
+        $subjectId = (int) ($assignment->subject_id ?? 0);
         $attendanceDate = $request->query('attendance_date', today()->toDateString());
 
         $students = Student::query()
             ->with(['strand', 'attendances' => function ($query) use ($subjectId, $attendanceDate) {
                 $query->where('subject_id', $subjectId)->whereDate('attendance_date', $attendanceDate);
             }])
-            ->when($request->filled('strand_id'), fn ($query) => $query->where('strand_id', $request->integer('strand_id')))
-            ->when($request->filled('year_level'), fn ($query) => $query->where('year_level', $request->query('year_level')))
-            ->when($request->filled('section'), fn ($query) => $query->where('section', $request->query('section')))
+            ->when($assignment, fn ($query) => $query
+                ->where('strand_id', $assignment->strand_id)
+                ->where('year_level', $assignment->year_level)
+                ->where('section', $assignment->section))
+            ->when(!$assignment, fn ($query) => $query->whereRaw('1 = 0'))
             ->orderBy('year_level')
             ->orderBy('section')
             ->orderBy('last_name')
             ->get();
 
-        return view('attendance.take', compact('subjects', 'strands', 'students', 'subjectId', 'attendanceDate'));
+        return view('attendance.take', compact('assignments', 'assignment', 'assignmentId', 'students', 'subjectId', 'attendanceDate'));
     }
 
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
+            'assignment_id' => ['required', 'exists:class_assignments,id'],
             'subject_id' => ['required', 'exists:subjects,id'],
             'attendance_date' => ['required', 'date'],
             'status' => ['required', 'array'],
@@ -47,8 +56,24 @@ class AttendanceController extends Controller
             'remarks' => ['nullable', 'array'],
         ]);
 
-        DB::transaction(function () use ($data) {
+        $assignment = ClassAssignment::where('id', $data['assignment_id'])
+            ->where('teacher_id', Auth::id())
+            ->where('subject_id', $data['subject_id'])
+            ->firstOrFail();
+
+        $allowedStudentIds = Student::query()
+            ->where('strand_id', $assignment->strand_id)
+            ->where('year_level', $assignment->year_level)
+            ->where('section', $assignment->section)
+            ->pluck('student_id')
+            ->all();
+
+        DB::transaction(function () use ($data, $allowedStudentIds) {
             foreach ($data['status'] as $studentId => $status) {
+                if (!in_array($studentId, $allowedStudentIds, true)) {
+                    continue;
+                }
+
                 Attendance::updateOrCreate([
                     'student_id' => $studentId,
                     'attendance_date' => $data['attendance_date'],
@@ -61,7 +86,9 @@ class AttendanceController extends Controller
             }
         });
 
-        return back()->with('success', 'Attendance saved successfully.');
+        return redirect()
+            ->route('teacher.attendance.create', ['assignment_id' => $data['assignment_id'], 'attendance_date' => $data['attendance_date']])
+            ->with('success', 'Attendance saved successfully.');
     }
 
     public function index(Request $request): View
