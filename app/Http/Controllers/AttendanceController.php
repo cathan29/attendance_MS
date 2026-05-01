@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Attendance;
+use App\Models\AuditLog;
 use App\Models\ClassAssignment;
+use App\Models\ClassSchedule;
 use App\Models\Strand;
 use App\Models\Student;
 use App\Models\SubjectModel;
@@ -18,7 +20,7 @@ class AttendanceController extends Controller
 {
     public function create(Request $request): View
     {
-        $assignments = ClassAssignment::with(['subject', 'strand'])
+        $assignments = ClassAssignment::with(['subject', 'strand', 'schedules'])
             ->where('teacher_id', Auth::id())
             ->orderBy('year_level')
             ->orderBy('section')
@@ -27,6 +29,12 @@ class AttendanceController extends Controller
         $assignment = $assignments->firstWhere('id', $assignmentId);
         $subjectId = (int) ($assignment->subject_id ?? 0);
         $attendanceDate = $request->query('attendance_date', today()->toDateString());
+        $dayOfWeek = \Carbon\Carbon::parse($attendanceDate)->dayOfWeekIso;
+        $scheduleId = (int) $request->query('class_schedule_id', 0);
+        $schedules = $assignment
+            ? ClassSchedule::where('class_assignment_id', $assignment->id)->where('day_of_week', $dayOfWeek)->orderBy('start_time')->get()
+            : collect();
+        $schedule = $schedules->firstWhere('id', $scheduleId) ?? $schedules->first();
 
         $students = Student::query()
             ->with(['strand', 'attendances' => function ($query) use ($subjectId, $attendanceDate) {
@@ -42,7 +50,7 @@ class AttendanceController extends Controller
             ->orderBy('last_name')
             ->get();
 
-        return view('attendance.take', compact('assignments', 'assignment', 'assignmentId', 'students', 'subjectId', 'attendanceDate'));
+        return view('attendance.take', compact('assignments', 'assignment', 'assignmentId', 'students', 'subjectId', 'attendanceDate', 'schedules', 'schedule'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -50,6 +58,7 @@ class AttendanceController extends Controller
         $data = $request->validate([
             'assignment_id' => ['required', 'exists:class_assignments,id'],
             'subject_id' => ['required', 'exists:subjects,id'],
+            'class_schedule_id' => ['nullable', 'exists:class_schedules,id'],
             'attendance_date' => ['required', 'date'],
             'status' => ['required', 'array'],
             'status.*' => ['required', 'in:Present,Late,Absent'],
@@ -60,6 +69,12 @@ class AttendanceController extends Controller
             ->where('teacher_id', Auth::id())
             ->where('subject_id', $data['subject_id'])
             ->firstOrFail();
+        $scheduleId = $data['class_schedule_id'] ?? null;
+        if ($scheduleId) {
+            ClassSchedule::where('id', $scheduleId)
+                ->where('class_assignment_id', $assignment->id)
+                ->firstOrFail();
+        }
 
         $allowedStudentIds = Student::query()
             ->where('strand_id', $assignment->strand_id)
@@ -74,20 +89,39 @@ class AttendanceController extends Controller
                     continue;
                 }
 
-                Attendance::updateOrCreate([
+                $existing = Attendance::where([
+                    'student_id' => $studentId,
+                    'attendance_date' => $data['attendance_date'],
+                    'subject_id' => $data['subject_id'],
+                ])->first();
+                $oldValues = $existing?->only(['status', 'remarks', 'teacher_id']);
+
+                $attendance = Attendance::updateOrCreate([
                     'student_id' => $studentId,
                     'attendance_date' => $data['attendance_date'],
                     'subject_id' => $data['subject_id'],
                 ], [
                     'teacher_id' => Auth::id(),
+                    'class_schedule_id' => $data['class_schedule_id'] ?? null,
                     'status' => $status,
                     'remarks' => $data['remarks'][$studentId] ?? null,
                 ]);
+
+                $newValues = $attendance->only(['status', 'remarks', 'teacher_id']);
+                if (!$existing || $oldValues !== $newValues) {
+                    AuditLog::record(
+                        $existing ? 'attendance_updated' : 'attendance_created',
+                        "{$attendance->student_id} marked {$attendance->status} for subject #{$attendance->subject_id} on {$attendance->attendance_date->toDateString()}",
+                        $attendance,
+                        $oldValues,
+                        $newValues
+                    );
+                }
             }
         });
 
         return redirect()
-            ->route('teacher.attendance.create', ['assignment_id' => $data['assignment_id'], 'attendance_date' => $data['attendance_date']])
+            ->route('teacher.attendance.create', ['assignment_id' => $data['assignment_id'], 'attendance_date' => $data['attendance_date'], 'class_schedule_id' => $data['class_schedule_id'] ?? null])
             ->with('success', 'Attendance saved successfully.');
     }
 

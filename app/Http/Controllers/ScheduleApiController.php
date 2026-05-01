@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ClassAssignment;
-use App\Models\Attendance;
+use App\Models\ClassSchedule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -21,16 +21,16 @@ class ScheduleApiController extends Controller
         $schedules = [];
 
         if ($user->role === 'teacher') {
-            // Get classes assigned to this teacher for today
-            $classes = ClassAssignment::where('teacher_id', $user->id)
-                ->with('subject')
+            $classes = ClassSchedule::where('day_of_week', $today->dayOfWeekIso)
+                ->whereHas('assignment', fn ($query) => $query->where('teacher_id', $user->id))
+                ->with(['assignment.subject', 'assignment.strand'])
+                ->orderBy('start_time')
                 ->get();
 
-            // Create schedule entries based on class count (simplified)
-            foreach ($classes as $index => $class) {
+            foreach ($classes as $class) {
                 $schedules[] = [
-                    'time' => sprintf('%02d:00 %s', 9 + ($index * 2), $index < 3 ? 'AM' : 'PM'),
-                    'title' => $class->subject?->subject_name ?? 'Class ' . ($index + 1),
+                    'time' => Carbon::parse($class->start_time)->format('h:i A') . ' - ' . Carbon::parse($class->end_time)->format('h:i A'),
+                    'title' => ($class->assignment->subject?->subject_name ?? 'Class') . ' / Grade ' . $class->assignment->year_level . ' ' . $class->assignment->strand->strand_name . '-' . $class->assignment->section . ' / Room ' . ($class->room ?: 'TBA'),
                 ];
             }
         } elseif ($user->role === 'admin') {
@@ -57,21 +57,19 @@ class ScheduleApiController extends Controller
         $classes = [];
 
         if ($user->role === 'teacher') {
-            // Get all classes assigned to this teacher
-            $assignments = ClassAssignment::where('teacher_id', $user->id)
-                ->with('subject')
+            $assignments = ClassSchedule::query()
+                ->whereHas('assignment', fn ($query) => $query->where('teacher_id', $user->id))
+                ->with(['assignment.subject'])
+                ->orderBy('day_of_week')
+                ->orderBy('start_time')
                 ->get();
 
-            // Create sample upcoming class entries
-            $daysAhead = 0;
-            foreach ($assignments as $index => $assignment) {
-                if ($index > 0 && $index % 3 === 0) $daysAhead++;
-                
-                $date = Carbon::now()->addDays($daysAhead);
+            foreach ($assignments as $assignment) {
+                $date = Carbon::now()->next($assignment->day_of_week);
                 $classes[] = [
-                    'subject' => $assignment->subject?->subject_name ?? 'Class',
+                    'subject' => $assignment->assignment->subject?->subject_name ?? 'Class',
                     'date' => $date->format('D, M d'),
-                    'time' => sprintf('%02d:%02d %s', 9 + ($index % 6), 0, $index % 6 < 3 ? 'AM' : 'PM'),
+                    'time' => Carbon::parse($assignment->start_time)->format('h:i A'),
                 ];
             }
         } elseif ($user->role === 'admin') {

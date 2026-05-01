@@ -19,6 +19,18 @@
             </select>
         </div>
         <div><label class="form-label">Date</label><input type="date" class="form-control" name="attendance_date" value="{{ $attendanceDate }}"></div>
+        @if($schedules->isNotEmpty())
+            <div class="col-md-3">
+                <label class="form-label">Schedule</label>
+                <select class="form-select" name="class_schedule_id">
+                    @foreach($schedules as $item)
+                        <option value="{{ $item->id }}" @selected($schedule?->id === $item->id)>
+                            {{ \Carbon\Carbon::parse($item->start_time)->format('h:i A') }} - {{ \Carbon\Carbon::parse($item->end_time)->format('h:i A') }} / {{ $item->room ?: 'TBA' }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+        @endif
         <button class="btn btn-outline-primary">Load Class</button>
     </form>
 </section>
@@ -27,15 +39,24 @@
         @csrf
         <input type="hidden" name="assignment_id" value="{{ $assignmentId }}">
         <input type="hidden" name="subject_id" value="{{ $subjectId }}">
+        <input type="hidden" name="class_schedule_id" value="{{ $schedule?->id }}">
         <input type="hidden" name="attendance_date" value="{{ $attendanceDate }}">
         @if($assignment)
             <div class="section-title">
                 <h2>{{ $assignment->subject->subject_name }}</h2>
-                <span class="chip-light">Grade {{ $assignment->year_level }} {{ $assignment->strand->strand_name }}-{{ $assignment->section }}</span>
+                <span class="chip-light">
+                    Grade {{ $assignment->year_level }} {{ $assignment->strand->strand_name }}-{{ $assignment->section }}
+                    @if($schedule)
+                        / {{ \Carbon\Carbon::parse($schedule->start_time)->format('h:i A') }} / Room {{ $schedule->room ?: 'TBA' }}
+                    @endif
+                </span>
             </div>
         @endif
+        <div class="live-search-control mb-3">
+            <input class="form-control" placeholder="Live search student name or ID" data-live-search data-live-search-target="#attendanceStudents tbody tr">
+        </div>
         <div class="table-responsive">
-            <table class="table align-middle">
+            <table class="table align-middle" id="attendanceStudents">
                 <thead><tr><th>Student</th><th class="attendance-options">Present</th><th class="attendance-options">Late</th><th class="attendance-options">Absent</th><th class="remarks-cell">Remarks</th></tr></thead>
                 <tbody>
                 @forelse($students as $student)

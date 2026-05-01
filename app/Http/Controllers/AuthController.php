@@ -24,10 +24,12 @@ class AuthController extends Controller
             'employee_id' => ['required', 'string'],
             'password' => ['required', 'string'],
         ]);
+        $login = trim($credentials['employee_id']);
+        $loginField = filter_var($login, FILTER_VALIDATE_EMAIL) ? 'email' : 'employee_id';
 
         $remember = $request->boolean('remember');
         if (Auth::attempt([
-            'employee_id' => $credentials['employee_id'],
+            $loginField => $login,
             'password' => $credentials['password'],
             'status' => 'active',
         ], $remember)) {
@@ -37,7 +39,7 @@ class AuthController extends Controller
         }
 
         return back()->withErrors([
-            'employee_id' => 'Invalid employee ID or password.',
+            'employee_id' => 'Invalid email, employee ID, or password.',
         ])->onlyInput('employee_id');
     }
 

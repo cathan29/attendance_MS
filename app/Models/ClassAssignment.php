@@ -31,6 +31,11 @@ class ClassAssignment extends Model
         return $this->belongsTo(Strand::class);
     }
 
+    public function schedules()
+    {
+        return $this->hasMany(ClassSchedule::class);
+    }
+
     public function label(): string
     {
         return $this->subject->subject_name . ' / Grade ' . $this->year_level . ' ' . $this->strand->strand_name . '-' . $this->section;

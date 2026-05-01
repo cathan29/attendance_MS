@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ClassScheduleController;
 use App\Http\Controllers\CurriculumController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ReportController;
@@ -31,13 +33,17 @@ Route::middleware('auth')->prefix('api')->name('api.')->group(function () {
 
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'admin'])->name('dashboard');
-    Route::resource('students', StudentController::class)->only(['index', 'store', 'destroy']);
+    Route::resource('students', StudentController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::resource('teachers', TeacherController::class)->only(['index', 'store', 'destroy']);
     Route::post('/teachers/{teacher}/reset-password', [TeacherController::class, 'resetPassword'])->name('teachers.reset-password');
-    Route::resource('curriculum', CurriculumController::class)->only(['index', 'store', 'destroy']);
+    Route::resource('curriculum', CurriculumController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::resource('schedules', ClassScheduleController::class)->only(['index', 'store', 'destroy']);
     Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
     Route::get('/attendance/export', [AttendanceController::class, 'export'])->name('attendance.export');
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('/reports/student/{student}/print', [ReportController::class, 'studentPrint'])->name('reports.student.print');
+    Route::get('/reports/section/print', [ReportController::class, 'sectionPrint'])->name('reports.section.print');
+    Route::get('/audit-trail', [AuditLogController::class, 'index'])->name('audit.index');
 });
 
 Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->name('teacher.')->group(function () {

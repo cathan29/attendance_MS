@@ -9,7 +9,7 @@
 </div>
 <section class="panel mb-4">
     <form method="GET" action="{{ route('admin.attendance.index') }}" class="action-bar">
-        <div class="col-md-4"><label class="form-label">Search</label><input class="form-control" name="q" value="{{ request('q') }}" placeholder="Student, teacher, subject, remarks"></div>
+        <div class="col-md-4"><label class="form-label">Search</label><input class="form-control" name="q" value="{{ request('q') }}" placeholder="Live search student, teacher, subject, remarks" data-live-search data-live-search-target="#attendanceRecords tbody tr"></div>
         <div><label class="form-label">From</label><input type="date" class="form-control" name="date_from" value="{{ request('date_from') }}"></div>
         <div><label class="form-label">To</label><input type="date" class="form-control" name="date_to" value="{{ request('date_to') }}"></div>
         <div><label class="form-label">Status</label><select class="form-select" name="status"><option value="">All</option>@foreach(['Present', 'Late', 'Absent'] as $status)<option @selected(request('status') === $status)>{{ $status }}</option>@endforeach</select></div>
@@ -22,7 +22,7 @@
 </section>
 <section class="panel">
     <div class="table-responsive">
-        <table class="table align-middle">
+        <table class="table align-middle" id="attendanceRecords">
             <thead><tr><th>Date</th><th>Student</th><th>Class</th><th>Subject</th><th>Teacher</th><th>Status</th><th>Remarks</th></tr></thead>
             <tbody>
             @forelse($records as $record)

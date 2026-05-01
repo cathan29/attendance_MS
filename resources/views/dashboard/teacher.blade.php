@@ -17,7 +17,10 @@
     <div class="section-title">
         <h2>Recent Submissions</h2>
     </div>
-    <table class="table align-middle">
+    <div class="live-search-control mb-3">
+        <input class="form-control" placeholder="Live search submissions" data-live-search data-live-search-target="#recentSubmissions tbody tr">
+    </div>
+    <table class="table align-middle" id="recentSubmissions">
         <thead><tr><th>Date</th><th>Subject</th><th>Records</th></tr></thead>
         <tbody>
         @forelse($history as $row)

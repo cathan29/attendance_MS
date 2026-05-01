@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -43,7 +44,7 @@ class TeacherController extends Controller
         $employeeId = $this->nextEmployeeId();
         $temporaryPassword = $this->generateTemporaryPassword();
 
-        User::create([
+        $teacher = User::create([
             'employee_id' => $employeeId,
             'first_name' => $data['first_name'],
             'middle_name' => $data['middle_name'] ?? null,
@@ -53,6 +54,7 @@ class TeacherController extends Controller
             'status' => $data['status'],
             'must_update_credentials' => true,
         ]);
+        AuditLog::record('teacher_created', "Created teacher {$teacher->employee_id}: {$teacher->last_name}, {$teacher->first_name}", $teacher, null, $teacher->only(['employee_id', 'first_name', 'last_name', 'status']));
 
         return back()
             ->with('success', 'Teacher account created. Share the temporary credentials securely.')
@@ -65,6 +67,8 @@ class TeacherController extends Controller
     public function destroy(User $teacher): RedirectResponse
     {
         abort_unless($teacher->role === 'teacher', 404);
+        $oldValues = $teacher->only(['employee_id', 'first_name', 'last_name', 'email', 'status']);
+        AuditLog::record('teacher_deleted', "Deleted teacher {$teacher->employee_id}: {$teacher->last_name}, {$teacher->first_name}", $teacher, $oldValues, null);
         $teacher->delete();
 
         return back()->with('success', 'Teacher deleted.');
@@ -79,6 +83,7 @@ class TeacherController extends Controller
             'password' => Hash::make($temporaryPassword),
             'must_update_credentials' => true,
         ])->save();
+        AuditLog::record('teacher_password_reset', "Reset password for teacher {$teacher->employee_id}: {$teacher->last_name}, {$teacher->first_name}", $teacher);
 
         return back()
             ->with('success', 'Teacher password reset. Share the temporary credentials securely.')

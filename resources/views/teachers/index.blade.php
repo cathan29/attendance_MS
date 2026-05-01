@@ -31,7 +31,7 @@
         <span class="chip-light">{{ $teachers->count() }} teachers</span>
     </div>
     <form method="GET" action="{{ route('admin.teachers.index') }}" class="search-bar">
-        <input class="form-control" name="q" value="{{ $search }}" placeholder="Search employee ID, name, email, or status">
+        <input class="form-control" name="q" value="{{ $search }}" placeholder="Live search employee ID, name, email, or status" data-live-search data-live-search-target="#teacherAccounts tbody tr">
         <button class="btn btn-outline-primary">Search</button>
         @if($search !== '')
             <a class="btn btn-outline-primary" href="{{ route('admin.teachers.index') }}">Clear</a>
@@ -41,7 +41,7 @@
         <h2>Password Section</h2>
         <span class="meta-line">Reset gives a new temporary password and requires first-login update again.</span>
     </div>
-    <table class="table align-middle">
+    <table class="table align-middle" id="teacherAccounts">
         <thead><tr><th>Employee ID</th><th>Name</th><th>Email</th><th>Status</th><th>Password</th><th></th></tr></thead>
         <tbody>
         @forelse($teachers as $teacher)

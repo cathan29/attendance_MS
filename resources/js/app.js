@@ -16,6 +16,21 @@ document.addEventListener('DOMContentLoaded', () => {
         requiredModal.querySelector('input')?.focus();
     }
 
+    document.querySelectorAll('[data-password-toggle]').forEach((button) => {
+        const input = button.closest('.password-field')?.querySelector('input');
+        if (!input) {
+            return;
+        }
+
+        button.addEventListener('click', () => {
+            const isHidden = input.type === 'password';
+            input.type = isHidden ? 'text' : 'password';
+            button.classList.toggle('is-visible', isHidden);
+            button.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+            button.setAttribute('title', isHidden ? 'Hide password' : 'Show password');
+        });
+    });
+
     // Right Sidebar Toggle
     const rightSidebar = document.getElementById('rightSidebar');
     const toggleButton = document.getElementById('rightSidebarToggle');
@@ -47,6 +62,29 @@ document.addEventListener('DOMContentLoaded', () => {
     loadScheduleData();
     loadUpcomingClasses();
     loadWeatherData();
+
+    document.querySelectorAll('[data-live-search]').forEach((input) => {
+        const targetSelector = input.dataset.liveSearchTarget;
+        if (!targetSelector) {
+            return;
+        }
+
+        const filter = () => {
+            const terms = input.value
+                .toLowerCase()
+                .trim()
+                .split(/\s+/)
+                .filter(Boolean);
+
+            document.querySelectorAll(targetSelector).forEach((item) => {
+                const haystack = (item.dataset.searchText || item.textContent || '').toLowerCase();
+                item.hidden = terms.length > 0 && !terms.every((term) => haystack.includes(term));
+            });
+        };
+
+        input.addEventListener('input', filter);
+        filter();
+    });
 });
 
 // Calendar Data Loader
