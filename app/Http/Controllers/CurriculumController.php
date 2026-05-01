@@ -85,6 +85,9 @@ class CurriculumController extends Controller
             'school_year' => ['required', 'string', 'max:20'],
             'semester' => ['required', 'string', 'max:20'],
         ]);
+        $data['section'] = strtoupper(trim($data['section']));
+        $data['school_year'] = trim($data['school_year']);
+        $data['semester'] = trim($data['semester']);
 
         $strand = Strand::findOrFail($data['strand_id']);
         $subject = SubjectModel::findOrFail($data['subject_id']);
@@ -93,6 +96,13 @@ class CurriculumController extends Controller
         if (!in_array($subject->subject_name, $allowedSubjects, true)) {
             return back()
                 ->withErrors(['subject_id' => "{$subject->subject_name} is not part of Grade {$data['year_level']} {$strand->strand_name} curriculum."])
+                ->withInput();
+        }
+
+        $duplicate = ClassAssignment::where($data)->exists();
+        if ($duplicate) {
+            return back()
+                ->withErrors(['subject_id' => 'This exact class assignment already exists.'])
                 ->withInput();
         }
 
@@ -113,6 +123,9 @@ class CurriculumController extends Controller
             'school_year' => ['required', 'string', 'max:20'],
             'semester' => ['required', 'string', 'max:20'],
         ]);
+        $data['section'] = strtoupper(trim($data['section']));
+        $data['school_year'] = trim($data['school_year']);
+        $data['semester'] = trim($data['semester']);
 
         $strand = Strand::findOrFail($data['strand_id']);
         $subject = SubjectModel::findOrFail($data['subject_id']);
@@ -121,6 +134,15 @@ class CurriculumController extends Controller
         if (!in_array($subject->subject_name, $allowedSubjects, true)) {
             return back()
                 ->withErrors(['subject_id' => "{$subject->subject_name} is not part of Grade {$data['year_level']} {$strand->strand_name} curriculum."])
+                ->withInput();
+        }
+
+        $duplicate = ClassAssignment::where('id', '!=', $curriculum->id)
+            ->where($data)
+            ->exists();
+        if ($duplicate) {
+            return back()
+                ->withErrors(['subject_id' => 'Another identical class assignment already exists.'])
                 ->withInput();
         }
 

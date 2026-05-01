@@ -245,13 +245,13 @@
                     <h2 id="teacherSetupTitle">Update your account</h2>
                 </div>
             </div>
-            <p class="setup-copy">Please add your email and create a new password before continuing to your teacher workspace.</p>
+            <p class="setup-copy">Please create a new password before continuing to your teacher workspace.</p>
 
             <form method="POST" action="{{ route('teacher.profile.credentials') }}" class="form-stack">
                 @csrf
                 <div class="field">
                     <label>Email Address</label>
-                    <input type="email" class="form-control" name="email" value="{{ old('email', auth()->user()->email) }}" placeholder="teacher@cipheracademy.edu" required>
+                    <input type="text" class="form-control" value="{{ auth()->user()->email ?: 'No email assigned' }}" readonly>
                 </div>
                 <div class="field">
                     <label>New Password</label>

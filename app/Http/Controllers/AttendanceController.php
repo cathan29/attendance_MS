@@ -59,10 +59,11 @@ class AttendanceController extends Controller
             'assignment_id' => ['required', 'exists:class_assignments,id'],
             'subject_id' => ['required', 'exists:subjects,id'],
             'class_schedule_id' => ['nullable', 'exists:class_schedules,id'],
-            'attendance_date' => ['required', 'date'],
+            'attendance_date' => ['required', 'date', 'before_or_equal:today'],
             'status' => ['required', 'array'],
             'status.*' => ['required', 'in:Present,Late,Absent'],
             'remarks' => ['nullable', 'array'],
+            'remarks.*' => ['nullable', 'string', 'max:255'],
         ]);
 
         $assignment = ClassAssignment::where('id', $data['assignment_id'])
@@ -71,9 +72,15 @@ class AttendanceController extends Controller
             ->firstOrFail();
         $scheduleId = $data['class_schedule_id'] ?? null;
         if ($scheduleId) {
-            ClassSchedule::where('id', $scheduleId)
+            $schedule = ClassSchedule::where('id', $scheduleId)
                 ->where('class_assignment_id', $assignment->id)
                 ->firstOrFail();
+
+            if ((int) $schedule->day_of_week !== (int) \Carbon\Carbon::parse($data['attendance_date'])->dayOfWeekIso) {
+                return back()
+                    ->withErrors(['class_schedule_id' => 'Selected schedule does not match the attendance date.'])
+                    ->withInput();
+            }
         }
 
         $allowedStudentIds = Student::query()

@@ -15,9 +15,14 @@ class ReportController extends Controller
 {
     public function index(Request $request): View
     {
-        $dateFrom = $request->query('date_from', now()->startOfMonth()->toDateString());
-        $dateTo = $request->query('date_to', now()->toDateString());
-        $subjectId = $request->integer('subject_id') ?: null;
+        $validated = $request->validate([
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
+            'subject_id' => ['nullable', 'integer', 'exists:subjects,id'],
+        ]);
+        $dateFrom = $validated['date_from'] ?? now()->startOfMonth()->toDateString();
+        $dateTo = $validated['date_to'] ?? now()->toDateString();
+        $subjectId = isset($validated['subject_id']) ? (int) $validated['subject_id'] : null;
         $fromDate = Carbon::parse($dateFrom)->startOfDay();
         $toDate = Carbon::parse($dateTo)->startOfDay();
         $periodDays = max(1, $fromDate->diffInDays($toDate) + 1);
@@ -233,7 +238,7 @@ class ReportController extends Controller
             'year_level' => ['required', 'in:11,12'],
             'section' => ['required', 'string', 'max:50'],
             'date_from' => ['nullable', 'date'],
-            'date_to' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
         ]);
         $dateFrom = $data['date_from'] ?? now()->startOfMonth()->toDateString();
         $dateTo = $data['date_to'] ?? now()->toDateString();

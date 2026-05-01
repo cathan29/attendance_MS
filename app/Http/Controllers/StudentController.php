@@ -42,14 +42,29 @@ class StudentController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $this->normalizeNameInput($request);
+
         $data = $request->validate([
-            'first_name' => ['required', 'string', 'max:100'],
-            'middle_name' => ['nullable', 'string', 'max:100'],
-            'last_name' => ['required', 'string', 'max:100'],
+            'first_name' => ['required', 'string', 'max:100', 'regex:/^[A-Za-zÑñ .\'-]+$/'],
+            'middle_name' => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-zÑñ .\'-]+$/'],
+            'last_name' => ['required', 'string', 'max:100', 'regex:/^[A-Za-zÑñ .\'-]+$/'],
             'strand_id' => ['required', 'exists:strands,id'],
             'year_level' => ['required', 'in:11,12'],
             'section' => ['required', 'in:' . implode(',', self::SECTIONS)],
         ]);
+
+        $duplicate = Student::where('first_name', $data['first_name'])
+            ->where('last_name', $data['last_name'])
+            ->where('strand_id', $data['strand_id'])
+            ->where('year_level', $data['year_level'])
+            ->where('section', $data['section'])
+            ->exists();
+
+        if ($duplicate) {
+            return back()
+                ->withErrors(['first_name' => 'A student with the same name and class already exists.'])
+                ->withInput();
+        }
 
         $data['student_id'] = $this->nextStudentId();
 
@@ -61,14 +76,30 @@ class StudentController extends Controller
 
     public function update(Request $request, Student $student): RedirectResponse
     {
+        $this->normalizeNameInput($request);
+
         $data = $request->validate([
-            'first_name' => ['required', 'string', 'max:100'],
-            'middle_name' => ['nullable', 'string', 'max:100'],
-            'last_name' => ['required', 'string', 'max:100'],
+            'first_name' => ['required', 'string', 'max:100', 'regex:/^[A-Za-zÑñ .\'-]+$/'],
+            'middle_name' => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-zÑñ .\'-]+$/'],
+            'last_name' => ['required', 'string', 'max:100', 'regex:/^[A-Za-zÑñ .\'-]+$/'],
             'strand_id' => ['required', 'exists:strands,id'],
             'year_level' => ['required', 'in:11,12'],
             'section' => ['required', 'in:' . implode(',', self::SECTIONS)],
         ]);
+
+        $duplicate = Student::whereKeyNot($student->student_id)
+            ->where('first_name', $data['first_name'])
+            ->where('last_name', $data['last_name'])
+            ->where('strand_id', $data['strand_id'])
+            ->where('year_level', $data['year_level'])
+            ->where('section', $data['section'])
+            ->exists();
+
+        if ($duplicate) {
+            return back()
+                ->withErrors(['first_name' => 'Another student with the same name and class already exists.'])
+                ->withInput();
+        }
 
         $oldValues = $student->only(['first_name', 'middle_name', 'last_name', 'strand_id', 'year_level', 'section']);
         $student->update($data);
@@ -102,5 +133,15 @@ class StudentController extends Controller
         } while (Student::whereKey($studentId)->exists());
 
         return $studentId;
+    }
+
+    private function normalizeNameInput(Request $request): void
+    {
+        $request->merge([
+            'first_name' => trim((string) $request->input('first_name')),
+            'middle_name' => trim((string) $request->input('middle_name')) ?: null,
+            'last_name' => trim((string) $request->input('last_name')),
+            'section' => strtoupper(trim((string) $request->input('section'))),
+        ]);
     }
 }

@@ -34,12 +34,29 @@ class TeacherController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $request->merge([
+            'first_name' => trim((string) $request->input('first_name')),
+            'middle_name' => trim((string) $request->input('middle_name')) ?: null,
+            'last_name' => trim((string) $request->input('last_name')),
+        ]);
+
         $data = $request->validate([
-            'first_name' => ['required', 'string', 'max:100'],
-            'middle_name' => ['nullable', 'string', 'max:100'],
-            'last_name' => ['required', 'string', 'max:100'],
+            'first_name' => ['required', 'string', 'max:100', 'regex:/^[A-Za-zÑñ .\'-]+$/'],
+            'middle_name' => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-zÑñ .\'-]+$/'],
+            'last_name' => ['required', 'string', 'max:100', 'regex:/^[A-Za-zÑñ .\'-]+$/'],
             'status' => ['required', 'in:active,inactive'],
         ]);
+
+        $duplicate = User::where('role', 'teacher')
+            ->where('first_name', $data['first_name'])
+            ->where('last_name', $data['last_name'])
+            ->exists();
+
+        if ($duplicate) {
+            return back()
+                ->withErrors(['first_name' => 'A teacher with the same first and last name already exists.'])
+                ->withInput();
+        }
 
         $employeeId = $this->nextEmployeeId();
         $temporaryPassword = $this->generateTemporaryPassword();

@@ -39,13 +39,39 @@ class ClassScheduleController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $request->merge([
+            'room' => strtoupper(trim((string) $request->input('room'))) ?: null,
+        ]);
+
         $data = $request->validate([
             'class_assignment_id' => ['required', 'exists:class_assignments,id'],
             'day_of_week' => ['required', 'integer', 'between:1,7'],
             'start_time' => ['required', 'date_format:H:i'],
             'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
-            'room' => ['nullable', 'string', 'max:50'],
+            'room' => ['nullable', 'string', 'max:50', 'regex:/^[A-Z0-9 -]+$/'],
         ]);
+        $assignment = ClassAssignment::findOrFail($data['class_assignment_id']);
+        $conflict = ClassSchedule::where('day_of_week', $data['day_of_week'])
+            ->where('id', '!=', ClassSchedule::where([
+                'class_assignment_id' => $data['class_assignment_id'],
+                'day_of_week' => $data['day_of_week'],
+                'start_time' => $data['start_time'],
+            ])->value('id'))
+            ->where(function ($query) use ($data) {
+                $query->where('start_time', '<', $data['end_time'])
+                    ->where('end_time', '>', $data['start_time']);
+            })
+            ->where(function ($query) use ($assignment, $data) {
+                $query->whereHas('assignment', fn ($load) => $load->where('teacher_id', $assignment->teacher_id))
+                    ->when($data['room'], fn ($roomQuery) => $roomQuery->orWhere('room', $data['room']));
+            })
+            ->exists();
+
+        if ($conflict) {
+            return back()
+                ->withErrors(['start_time' => 'Schedule conflict found for the teacher or room in this time slot.'])
+                ->withInput();
+        }
 
         $schedule = ClassSchedule::updateOrCreate([
             'class_assignment_id' => $data['class_assignment_id'],
