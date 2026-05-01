@@ -6,7 +6,7 @@
         <p class="text-muted mb-0">Filter a class, choose a subject, then save one record per student.</p>
     </div>
 </div>
-<section class="panel mb-4">
+<section class="panel mb-4 teacher-filter-panel">
     <form method="GET" action="{{ route('teacher.attendance.create') }}" class="action-bar">
         <div class="col-md-6">
             <label class="form-label">Assigned Class</label>
@@ -34,7 +34,7 @@
         <button class="btn btn-outline-primary">Load Class</button>
     </form>
 </section>
-<section class="panel">
+<section class="panel teacher-attendance-panel">
     <form method="POST" action="{{ route('teacher.attendance.store') }}">
         @csrf
         <input type="hidden" name="assignment_id" value="{{ $assignmentId }}">
@@ -53,9 +53,34 @@
             </div>
         @endif
         <div class="live-search-control mb-3">
-            <input class="form-control" placeholder="Live search student name or ID" data-live-search data-live-search-target="#attendanceStudents tbody tr">
+            <input class="form-control" placeholder="Live search student name or ID" data-live-search data-live-search-target="#attendanceStudents tbody tr, #attendanceStudentCards .attendance-card">
         </div>
-        <div class="table-responsive">
+        <div class="teacher-attendance-cards" id="attendanceStudentCards">
+            @forelse($students as $student)
+                @php($saved = $student->attendances->first())
+                @php($status = $saved->status ?? 'Present')
+                <article class="attendance-card">
+                    <div class="attendance-card-head">
+                        <div>
+                            <strong>{{ $student->last_name }}, {{ $student->first_name }}</strong>
+                            <span>{{ $student->student_id }} / {{ $student->year_level }}-{{ $student->section }}</span>
+                        </div>
+                    </div>
+                    <div class="attendance-segment">
+                        @foreach(['Present', 'Late', 'Absent'] as $option)
+                            <label class="{{ strtolower($option) }}">
+                                <input type="radio" name="status[{{ $student->student_id }}]" value="{{ $option }}" @checked($status === $option)>
+                                <span>{{ $option }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+                    <input class="form-control" name="remarks[{{ $student->student_id }}]" value="{{ $saved->remarks ?? '' }}" placeholder="Remarks">
+                </article>
+            @empty
+                <p class="text-center empty-state py-4">No assigned students found. Ask the admin to set your curriculum load first.</p>
+            @endforelse
+        </div>
+        <div class="table-responsive teacher-attendance-table">
             <table class="table align-middle" id="attendanceStudents">
                 <thead><tr><th>Student</th><th class="attendance-options">Present</th><th class="attendance-options">Late</th><th class="attendance-options">Absent</th><th class="remarks-cell">Remarks</th></tr></thead>
                 <tbody>
@@ -75,7 +100,9 @@
                 </tbody>
             </table>
         </div>
-        <button class="btn btn-primary" @disabled($students->isEmpty() || !$subjectId || !$assignment)>Save Attendance</button>
+        <div class="teacher-save-bar">
+            <button class="btn btn-primary" @disabled($students->isEmpty() || !$subjectId || !$assignment)>Save Attendance</button>
+        </div>
     </form>
 </section>
 @endsection
