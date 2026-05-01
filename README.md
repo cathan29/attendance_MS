@@ -1,47 +1,35 @@
-# 🏫 Attendance Monitoring System
+# Attendance Monitoring System
 
-Welcome to the team repository! This is a 2-tier system (Admin & Teacher) built with PHP, MySQL, Bootstrap, and XAMPP.
+This project is now a Laravel attendance management system at the repository root.
 
-## 🚀 Initial Setup (Do this only ONCE)
-1. Make sure **Apache** and **MySQL** are running in your XAMPP Control Panel.
-2. Open your terminal inside your `C:\xampp\htdocs` folder and clone this repo: 
-   `git clone https://github.com/cathan29/attendance_MS.git`
-3. Open phpMyAdmin (`http://localhost/phpmyadmin`), create a database named `attendance_MS`, and import the `database/schema.sql` file.
+The old plain-PHP/XAMPP version was preserved in `legacy_php` so the previous work is still available for reference.
 
----
+## Features
 
-## ☀️ Daily Workflow (Do this EVERY DAY)
-**Rule #1: Always get the latest code from the Team Leader before you start typing to avoid code conflicts!**
+* Admin and teacher login with Laravel authentication.
+* Role-based access for admin and teacher dashboards.
+* Student management.
+* Teacher account management.
+* Attendance taking by subject, date, strand, year level, and section.
+* Attendance review and CSV export.
+* Laravel migrations, seeders, controllers, models, middleware, and Blade views.
 
-### Step 1: Pull the latest master code
-Open your terminal inside the `attendance_MS` folder and run:
-`git checkout main`
-`git pull origin main`
+## Setup
 
-### Step 2: Go to your assigned branch
-Switch to your safe workspace. 
-`git checkout -b your-branch-name`
-*(Note: If you already created your branch yesterday, just type `git checkout your-branch-name` without the `-b`)*
+1. Start MySQL in XAMPP.
+2. Create the database if it does not exist:
+   `CREATE DATABASE attendance_ms_laravel CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`
+3. Install PHP dependencies if needed:
+   `composer install`
+4. Run migrations and seed the default data:
+   `php artisan migrate:fresh --seed`
+5. Start the app:
+   `php artisan serve`
+6. Open `http://127.0.0.1:8000`.
 
----
+## Default Login
 
-## 📋 Assigned Branches for the Team:
-* **UI/UX & Navigation:** `feature-ui-layout`
-* **Admin Dashboard:** `feature-admin-dashboard`
-* **Teacher Dashboard:** `feature-teacher-dashboard`
-* **Student Data Manager:** `feature-manage-students`
-* **Attendance Viewer:** `feature-view-attendance`
-* **Reporting & Export:** `feature-export-reports`
-* **Teacher Account Manager:** `feature-manage-teachers`
-* **Authentication & Security:** `feature-login-auth`
-* **Bulk Attendance Engine:** `feature-take-attendance`
+* Employee ID: `ADMIN-001`
+* Password: `Admin@123`
 
----
-
-## 💾 How to Save & Submit Your Work:
-When your assigned PHP file is working perfectly on your localhost, save it and send it to the Team Leader for review:
-1. `git add .`
-2. `git commit -m "Brief description of what you finished"`
-3. `git push origin your-branch-name`
-
-*Note: If you get a Git error or merge conflict, stop and message the Team Leader in the group chat!*
+Change the default password after first login.
