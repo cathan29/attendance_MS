@@ -4637,3 +4637,105 @@ body {
 .admin-calendar-btn::after {
     content: "Calendar";
 }
+
+.pwa-install-banner {
+    position: fixed;
+    left: max(14px, env(safe-area-inset-left));
+    right: max(14px, env(safe-area-inset-right));
+    bottom: max(14px, env(safe-area-inset-bottom));
+    z-index: 10050;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 12px;
+    width: min(560px, calc(100vw - 28px));
+    margin: 0 auto;
+    padding: 12px;
+    border: 1px solid rgba(226, 214, 200, .94);
+    border-radius: 10px;
+    background: rgba(255, 253, 249, .98);
+    box-shadow: 0 18px 48px rgba(15, 23, 42, .22);
+}
+
+.pwa-install-banner strong,
+.pwa-install-banner span {
+    display: block;
+}
+
+.pwa-install-banner strong {
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 1.2;
+}
+
+.pwa-install-banner span {
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+.pwa-install-dismiss {
+    display: inline-grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--muted);
+    cursor: pointer;
+    font-weight: 900;
+}
+
+.offline-status {
+    position: fixed;
+    left: 50%;
+    bottom: max(14px, env(safe-area-inset-bottom));
+    z-index: 10040;
+    transform: translateX(-50%);
+    max-width: calc(100vw - 28px);
+    padding: 9px 12px;
+    border: 1px solid #ead6a6;
+    border-radius: 999px;
+    background: var(--gold-soft);
+    color: #6d4a13;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, .16);
+    font-size: 12px;
+    font-weight: 850;
+    text-align: center;
+}
+
+.is-offline [data-attendance-save-form] .teacher-save-bar .btn {
+    background: var(--warning);
+}
+
+@media (max-width: 768px) {
+    .pwa-install-banner {
+        grid-template-columns: minmax(0, 1fr) auto;
+        bottom: 10px;
+        width: calc(100vw - 20px);
+    }
+
+    .pwa-install-banner .btn {
+        min-height: 38px;
+        padding: 0 12px;
+    }
+
+    .pwa-install-dismiss {
+        grid-column: 2;
+        grid-row: 1;
+        width: 32px;
+        height: 32px;
+    }
+
+    .offline-status {
+        bottom: 18px;
+        border-radius: 8px;
+    }
+
+    .teacher-save-bar + .offline-status,
+    .is-offline .offline-status {
+        bottom: 12px;
+    }
+}

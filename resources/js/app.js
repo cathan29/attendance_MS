@@ -2,6 +2,10 @@ import './bootstrap';
 
 document.addEventListener('DOMContentLoaded', () => {
     bindToasts();
+    registerPwa();
+    bindInstallPrompt();
+    bindConnectionState();
+    syncQueuedAttendance();
 
     const requiredModal = document.querySelector('[data-required-modal]');
     if (requiredModal) {
@@ -102,6 +106,194 @@ function showToast(type, message) {
     `;
     stack.appendChild(toast);
     bindToasts(stack);
+}
+
+const ATTENDANCE_QUEUE_KEY = 'cipher_attendance_queue_v1';
+let deferredInstallPrompt = null;
+
+function registerPwa() {
+    if (!('serviceWorker' in navigator)) {
+        return;
+    }
+
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch((error) => {
+            console.warn('Service worker registration failed:', error);
+        });
+    });
+}
+
+function bindInstallPrompt() {
+    window.addEventListener('beforeinstallprompt', (event) => {
+        event.preventDefault();
+        deferredInstallPrompt = event;
+        showInstallBanner();
+    });
+
+    window.addEventListener('appinstalled', () => {
+        deferredInstallPrompt = null;
+        document.querySelector('[data-pwa-install-banner]')?.remove();
+        localStorage.setItem('cipher_pwa_installed', 'true');
+    });
+}
+
+function showInstallBanner() {
+    if (!deferredInstallPrompt || document.querySelector('[data-pwa-install-banner]')) {
+        return;
+    }
+
+    const banner = document.createElement('div');
+    banner.className = 'pwa-install-banner';
+    banner.dataset.pwaInstallBanner = 'true';
+    banner.innerHTML = `
+        <div>
+            <strong>Install attendance app</strong>
+            <span>Mas mabilis buksan sa phone at may offline attendance queue.</span>
+        </div>
+        <button type="button" class="btn btn-primary" data-pwa-install>Install</button>
+        <button type="button" class="pwa-install-dismiss" data-pwa-dismiss aria-label="Dismiss install prompt">x</button>
+    `;
+
+    document.body.appendChild(banner);
+
+    banner.querySelector('[data-pwa-install]')?.addEventListener('click', async () => {
+        if (!deferredInstallPrompt) {
+            return;
+        }
+
+        deferredInstallPrompt.prompt();
+        await deferredInstallPrompt.userChoice.catch(() => null);
+        deferredInstallPrompt = null;
+        banner.remove();
+    });
+
+    banner.querySelector('[data-pwa-dismiss]')?.addEventListener('click', () => {
+        banner.remove();
+    });
+}
+
+function bindConnectionState() {
+    const update = () => {
+        document.body.classList.toggle('is-offline', !navigator.onLine);
+        updateOfflineBadge();
+        if (navigator.onLine) {
+            syncQueuedAttendance();
+        }
+    };
+
+    window.addEventListener('online', update);
+    window.addEventListener('offline', update);
+    update();
+}
+
+function updateOfflineBadge() {
+    const pending = getQueuedAttendance().length;
+    let badge = document.querySelector('[data-offline-status]');
+
+    if (navigator.onLine && pending === 0) {
+        badge?.remove();
+        return;
+    }
+
+    if (!badge) {
+        badge = document.createElement('div');
+        badge.className = 'offline-status';
+        badge.dataset.offlineStatus = 'true';
+        document.body.appendChild(badge);
+    }
+
+    badge.textContent = navigator.onLine
+        ? `${pending} attendance ${pending === 1 ? 'set' : 'sets'} waiting to sync`
+        : `Offline mode${pending > 0 ? ` / ${pending} queued` : ''}`;
+}
+
+function getQueuedAttendance() {
+    try {
+        return JSON.parse(localStorage.getItem(ATTENDANCE_QUEUE_KEY) || '[]');
+    } catch (error) {
+        return [];
+    }
+}
+
+function setQueuedAttendance(queue) {
+    localStorage.setItem(ATTENDANCE_QUEUE_KEY, JSON.stringify(queue));
+    updateOfflineBadge();
+}
+
+function queueAttendanceSubmission(form) {
+    const formData = new FormData(form);
+    const payload = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        action: form.action,
+        method: (form.method || 'POST').toUpperCase(),
+        createdAt: new Date().toISOString(),
+        entries: Array.from(formData.entries()),
+    };
+
+    const queue = getQueuedAttendance();
+    const assignmentId = formData.get('assignment_id');
+    const subjectId = formData.get('subject_id');
+    const scheduleId = formData.get('class_schedule_id') || '';
+    const attendanceDate = formData.get('attendance_date');
+    const sameClassIndex = queue.findIndex((item) => {
+        const itemData = new Map(item.entries);
+        return itemData.get('assignment_id') === assignmentId
+            && itemData.get('subject_id') === subjectId
+            && (itemData.get('class_schedule_id') || '') === scheduleId
+            && itemData.get('attendance_date') === attendanceDate;
+    });
+
+    if (sameClassIndex >= 0) {
+        queue.splice(sameClassIndex, 1, payload);
+    } else {
+        queue.push(payload);
+    }
+
+    setQueuedAttendance(queue);
+}
+
+async function syncQueuedAttendance() {
+    if (!navigator.onLine) {
+        updateOfflineBadge();
+        return;
+    }
+
+    let queue = getQueuedAttendance();
+    if (queue.length === 0) {
+        updateOfflineBadge();
+        return;
+    }
+
+    for (const item of [...queue]) {
+        const formData = new FormData();
+        item.entries.forEach(([name, value]) => formData.append(name, value));
+
+        try {
+            const response = await fetch(item.action, {
+                method: item.method || 'POST',
+                body: formData,
+                credentials: 'same-origin',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                const message = data.message || Object.values(data.errors || {})[0]?.[0] || 'Queued attendance sync failed.';
+                throw new Error(message);
+            }
+
+            queue = getQueuedAttendance().filter((queued) => queued.id !== item.id);
+            setQueuedAttendance(queue);
+            showToast('success', 'Queued attendance synced to admin.');
+        } catch (error) {
+            console.warn('Attendance sync paused:', error);
+            updateOfflineBadge();
+            break;
+        }
+    }
 }
 
 function escapeHtml(value) {
@@ -445,6 +637,12 @@ function bindAjaxAttendance(root = document) {
             }
 
             try {
+                if (!navigator.onLine) {
+                    queueAttendanceSubmission(saveForm);
+                    showToast('success', 'Attendance saved offline. It will sync when internet comes back.');
+                    return;
+                }
+
                 const response = await fetch(saveForm.action, {
                     method: 'POST',
                     body: new FormData(saveForm),
@@ -465,7 +663,12 @@ function bindAjaxAttendance(root = document) {
                     window.history.replaceState({}, '', data.redirect_url);
                 }
             } catch (error) {
-                showToast('danger', error.message || 'Unable to save attendance.');
+                if (error instanceof TypeError || !navigator.onLine) {
+                    queueAttendanceSubmission(saveForm);
+                    showToast('success', 'Connection dropped, so attendance was saved offline and queued for sync.');
+                } else {
+                    showToast('danger', error.message || 'Unable to save attendance.');
+                }
             } finally {
                 if (submitButton) {
                     submitButton.textContent = originalText || 'Save Attendance';
