@@ -2,11 +2,13 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use App\Models\Attendance;
+use App\Models\ClassAssignment;
+use App\Models\ClassSchedule;
 use App\Models\Strand;
 use App\Models\Student;
 use App\Models\SubjectModel;
+use App\Models\User;
 use Carbon\CarbonPeriod;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -15,84 +17,173 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        $admin = User::updateOrCreate([
+        $schoolYear = now()->year . '-' . now()->copy()->addYear()->year;
+        $studentYear = (string) now()->year;
+        $curriculum = config('curriculum');
+        $semester = '1st Semester';
+        $semesterDates = config("school.semesters.{$semester}", []);
+
+        User::updateOrCreate([
             'employee_id' => 'ADMIN-001',
         ], [
-            'first_name' => 'System',
+            'first_name' => 'Sergs Rafael',
             'middle_name' => null,
-            'last_name' => 'Administrator',
+            'last_name' => 'Oriel',
+            'email' => 'sergs@cipheracademy.edu',
             'password' => Hash::make('Admin@123'),
             'role' => 'admin',
             'status' => 'active',
+            'must_update_credentials' => false,
         ]);
 
         $teachers = collect([
-            ['T-1001', 'Maria', 'Santos'],
-            ['T-1002', 'Jose', 'Reyes'],
-            ['T-1003', 'Ana', 'Cruz'],
-            ['T-1004', 'Ramon', 'Garcia'],
-        ])->map(fn ($teacher) => User::updateOrCreate([
-            'employee_id' => $teacher[0],
-        ], [
-            'first_name' => $teacher[1],
-            'middle_name' => null,
-            'last_name' => $teacher[2],
-            'password' => Hash::make('Teacher@123'),
-            'role' => 'teacher',
-            'status' => 'active',
-        ]))->values();
+            ['CA-T-001', 'Dianne', 'Ramirez', 'dianne.ramirez@cipheracademy.edu', 'Cipher@1001'],
+            ['CA-T-002', 'John Kurt', 'Bayangat', 'johnkurt.bayangat@cipheracademy.edu', 'Cipher@1002'],
+            ['CA-T-003', 'Mark Anthony', 'Ortega', 'markanthony.ortega@cipheracademy.edu', 'Cipher@1003'],
+            ['CA-T-004', 'Jhustyn Jhay', 'Datuin', 'jhustynjhay.datuin@cipheracademy.edu', 'Cipher@1004'],
+            ['CA-T-005', 'Adrian', 'Montemayor', 'adrian.montemayor@cipheracademy.edu', 'Cipher@1005'],
+            ['CA-T-006', 'Rodel', 'Mamaril', 'rodel.mamaril@cipheracademy.edu', 'Cipher@1006'],
+            ['CA-T-007', 'Jimar', 'Esmeria', 'jimar.esmeria@cipheracademy.edu', 'Cipher@1007'],
+            ['CA-T-008', 'Leslie', 'Sabangan', 'leslie.sabangan@cipheracademy.edu', 'Cipher@1008'],
+            ['CA-T-009', 'Jasmine', 'Miranda', 'jasmine.miranda@cipheracademy.edu', 'Cipher@1009'],
+        ])->map(function (array $teacher) {
+            return User::updateOrCreate([
+                'employee_id' => $teacher[0],
+            ], [
+                'first_name' => $teacher[1],
+                'middle_name' => null,
+                'last_name' => $teacher[2],
+                'email' => $teacher[3],
+                'password' => Hash::make($teacher[4]),
+                'role' => 'teacher',
+                'status' => 'active',
+                'must_update_credentials' => true,
+            ]);
+        })->values();
 
-        $strands = collect(['ABM', 'GAS', 'HUMSS', 'STEM', 'TVL'])->mapWithKeys(function ($strand) {
+        $strands = collect(array_keys($curriculum))->mapWithKeys(function (string $strand) {
             return [$strand => Strand::firstOrCreate(['strand_name' => $strand])];
         });
 
-        $subjects = collect(['English', 'Filipino', 'Mathematics', 'Science', 'Practical Research'])->mapWithKeys(function ($subject) {
-            return [$subject => SubjectModel::firstOrCreate(['subject_name' => $subject])];
-        });
+        $subjects = collect($curriculum)
+            ->flatMap(fn (array $grades) => collect($grades)->flatten())
+            ->unique()
+            ->values()
+            ->mapWithKeys(fn (string $subject) => [
+                $subject => SubjectModel::firstOrCreate(['subject_name' => $subject]),
+            ]);
 
-        $firstNames = ['Liam', 'Sophia', 'Miguel', 'Isabella', 'Noah', 'Ava', 'Gabriel', 'Mia', 'Ethan', 'Chloe', 'Lucas', 'Zoe', 'Daniel', 'Yuna', 'Nathan', 'Amara', 'Caleb', 'Luna', 'Adrian', 'Nina', 'Marco', 'Elena', 'Jasper', 'Bianca'];
-        $lastNames = ['Dela Cruz', 'Mendoza', 'Aquino', 'Villanueva', 'Torres', 'Flores', 'Ramos', 'Castillo', 'Rivera', 'Bautista', 'Morales', 'Navarro'];
-        $sections = [
-            ['11', 'STEM', 'A'],
-            ['11', 'ABM', 'B'],
-            ['12', 'HUMSS', 'A'],
-            ['12', 'TVL', 'C'],
+        $firstNames = [
+            'Aaliyah', 'Adrian', 'Althea', 'Andre', 'Bianca', 'Caleb', 'Celine', 'Daniel',
+            'Elaine', 'Enzo', 'Faith', 'Gabriel', 'Hannah', 'Ivan', 'Jasmine', 'Kyle',
+            'Lara', 'Marco', 'Nadine', 'Nathan', 'Olivia', 'Paolo', 'Queenie', 'Rafael',
+            'Samantha', 'Theo', 'Ysabel', 'Zion', 'Mika', 'Luis',
+        ];
+        $lastNames = [
+            'Aquino', 'Bautista', 'Castillo', 'Dela Cruz', 'Flores', 'Garcia', 'Gonzales',
+            'Lopez', 'Mendoza', 'Morales', 'Navarro', 'Ramos', 'Reyes', 'Rivera',
+            'Santos', 'Torres', 'Valdez', 'Villanueva',
         ];
 
+        $sections = collect([
+            ['11', 'ABM', 'A'],
+            ['11', 'GAS', 'A'],
+            ['11', 'HUMSS', 'A'],
+            ['11', 'STEM', 'A'],
+            ['11', 'TVL', 'A'],
+            ['12', 'ABM', 'B'],
+            ['12', 'GAS', 'B'],
+            ['12', 'HUMSS', 'B'],
+            ['12', 'STEM', 'B'],
+            ['12', 'TVL', 'B'],
+        ]);
+
         $students = collect();
-        $counter = 1;
-        foreach ($sections as [$year, $strandName, $section]) {
-            for ($i = 0; $i < 10; $i++) {
+        $studentNumber = 1;
+
+        foreach ($sections as [$yearLevel, $strandName, $section]) {
+            for ($i = 0; $i < 8; $i++) {
                 $students->push(Student::updateOrCreate([
-                    'student_id' => 'S-' . str_pad((string) $counter, 4, '0', STR_PAD_LEFT),
+                    'student_id' => $studentYear . str_pad((string) $studentNumber, 3, '0', STR_PAD_LEFT),
                 ], [
-                    'first_name' => $firstNames[($counter - 1) % count($firstNames)],
+                    'first_name' => $firstNames[($studentNumber - 1) % count($firstNames)],
                     'middle_name' => null,
-                    'last_name' => $lastNames[($counter - 1) % count($lastNames)],
+                    'last_name' => $lastNames[($studentNumber + $i - 1) % count($lastNames)],
                     'strand_id' => $strands[$strandName]->id,
-                    'year_level' => $year,
+                    'year_level' => $yearLevel,
                     'section' => $section,
                 ]));
-                $counter++;
+
+                $studentNumber++;
             }
         }
 
-        $period = CarbonPeriod::create(now()->subDays(27)->startOfDay(), now()->startOfDay());
+        $assignments = collect();
+
+        foreach ($sections as $sectionIndex => [$yearLevel, $strandName, $section]) {
+            foreach ($curriculum[$strandName][$yearLevel] as $subjectIndex => $subjectName) {
+                $assignments->push(ClassAssignment::updateOrCreate([
+                    'teacher_id' => $teachers[($sectionIndex + $subjectIndex) % $teachers->count()]->id,
+                    'subject_id' => $subjects[$subjectName]->id,
+                    'strand_id' => $strands[$strandName]->id,
+                    'year_level' => $yearLevel,
+                    'section' => $section,
+                    'school_year' => $schoolYear,
+                    'semester' => $semester,
+                    'semester_start_date' => $semesterDates['start_date'] ?? null,
+                    'semester_end_date' => $semesterDates['end_date'] ?? null,
+                ]));
+            }
+        }
+
+        $timeSlots = [
+            ['08:00', '09:00'],
+            ['09:00', '10:00'],
+            ['10:15', '11:15'],
+            ['11:15', '12:15'],
+            ['13:00', '14:00'],
+            ['14:00', '15:00'],
+        ];
+
+        foreach ($assignments as $index => $assignment) {
+            [$start, $end] = $timeSlots[$index % count($timeSlots)];
+            ClassSchedule::updateOrCreate([
+                'class_assignment_id' => $assignment->id,
+                'day_of_week' => ($index % 5) + 1,
+                'start_time' => $start,
+            ], [
+                'end_time' => $end,
+                'room' => 'R-' . (200 + (($index % 12) + 1)),
+            ]);
+        }
+
+        $schedules = ClassSchedule::with('assignment')->get();
+
+        $period = CarbonPeriod::create(now()->subDays(34)->startOfDay(), now()->startOfDay());
+
         foreach ($period as $date) {
             if ($date->isWeekend()) {
                 continue;
             }
 
-            foreach ($students as $index => $student) {
-                foreach ($subjects->values() as $subjectIndex => $subject) {
-                    if (($index + $subjectIndex + $date->day) % 5 === 0) {
-                        continue;
-                    }
+            foreach ($students as $studentIndex => $student) {
+                $strandName = $student->strand->strand_name;
+                $subjectNames = $curriculum[$strandName][$student->year_level];
 
-                    $statusSeed = ($index * 3) + $subjectIndex + $date->dayOfYear;
+                foreach ($subjectNames as $subjectIndex => $subjectName) {
+                    $subject = $subjects[$subjectName];
+                    $assignment = $assignments->first(fn (ClassAssignment $assignment) => $assignment->subject_id === $subject->id
+                        && $assignment->strand_id === $student->strand_id
+                        && $assignment->year_level === $student->year_level
+                        && $assignment->section === $student->section);
+                    $schedule = $schedules->first(fn (ClassSchedule $schedule) => $assignment
+                        && $schedule->class_assignment_id === $assignment->id
+                        && (int) $schedule->day_of_week === (int) $date->dayOfWeekIso);
+
+                    $statusSeed = $studentIndex + ($subjectIndex * 3) + $date->dayOfYear;
                     $status = match (true) {
-                        $statusSeed % 17 === 0 => 'Absent',
-                        $statusSeed % 7 === 0 => 'Late',
+                        $statusSeed % 19 === 0 => 'Absent',
+                        $statusSeed % 8 === 0 => 'Late',
                         default => 'Present',
                     };
 
@@ -101,9 +192,14 @@ class DatabaseSeeder extends Seeder
                         'attendance_date' => $date->toDateString(),
                         'subject_id' => $subject->id,
                     ], [
-                        'teacher_id' => $teachers[($subjectIndex + $index) % $teachers->count()]->id,
+                        'teacher_id' => $assignment?->teacher_id ?? $teachers[$subjectIndex % $teachers->count()]->id,
+                        'class_schedule_id' => $schedule?->id,
                         'status' => $status,
-                        'remarks' => $status === 'Present' ? null : ($status === 'Late' ? 'Arrived after the bell.' : 'Needs follow-up.'),
+                        'remarks' => match ($status) {
+                            'Late' => 'Arrived after the first period check.',
+                            'Absent' => 'For adviser follow-up.',
+                            default => null,
+                        },
                     ]);
                 }
             }

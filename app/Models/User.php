@@ -7,11 +7,12 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -23,9 +24,11 @@ class User extends Authenticatable
         'first_name',
         'middle_name',
         'last_name',
+        'email',
         'password',
         'role',
         'status',
+        'must_update_credentials',
     ];
 
     /**
@@ -47,6 +50,7 @@ class User extends Authenticatable
     {
         return [
             'password' => 'hashed',
+            'must_update_credentials' => 'boolean',
         ];
     }
 
@@ -58,5 +62,10 @@ class User extends Authenticatable
     public function attendances()
     {
         return $this->hasMany(Attendance::class, 'teacher_id');
+    }
+
+    public function classAssignments()
+    {
+        return $this->hasMany(ClassAssignment::class, 'teacher_id');
     }
 }

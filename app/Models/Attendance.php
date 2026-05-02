@@ -10,6 +10,7 @@ class Attendance extends Model
         'student_id',
         'teacher_id',
         'subject_id',
+        'class_schedule_id',
         'attendance_date',
         'status',
         'remarks',
@@ -29,11 +30,16 @@ class Attendance extends Model
 
     public function teacher()
     {
-        return $this->belongsTo(User::class, 'teacher_id');
+        return $this->belongsTo(User::class, 'teacher_id')->withTrashed();
     }
 
     public function subject()
     {
         return $this->belongsTo(SubjectModel::class, 'subject_id');
+    }
+
+    public function schedule()
+    {
+        return $this->belongsTo(ClassSchedule::class, 'class_schedule_id');
     }
 }

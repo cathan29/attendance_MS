@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0f172a">
+    <title>Offline - Cipher Academy</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --ink: #1f2a37;
+            --muted: #746b60;
+            --primary: #173b63;
+            --line: #e2d6c8;
+            --gold-soft: #fff5dd;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+            background: linear-gradient(180deg, #fbf7ef, #f3eee6);
+            color: var(--ink);
+            font-family: Inter, "Segoe UI", sans-serif;
+        }
+
+        main {
+            width: min(460px, 100%);
+            padding: 24px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: rgba(255, 253, 249, .96);
+            box-shadow: 0 20px 50px rgba(15, 23, 42, .12);
+        }
+
+        img {
+            width: 58px;
+            height: 58px;
+            object-fit: cover;
+            border-radius: 12px;
+            background: #0f172a;
+        }
+
+        h1 {
+            margin: 18px 0 8px;
+            font-size: 26px;
+            line-height: 1.1;
+        }
+
+        p {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.55;
+        }
+
+        a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 42px;
+            margin-top: 18px;
+            padding: 0 14px;
+            border-radius: 8px;
+            background: var(--primary);
+            color: #fff;
+            font-weight: 800;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <img src="/images/school_logo.png" alt="Cipher Academy logo">
+        <h1>Offline mode</h1>
+        <p>You can continue using pages that were already opened. Attendance saved offline will sync when internet comes back.</p>
+        <a href="/teacher/attendance/take">Back to attendance</a>
+    </main>
+</body>
+</html>

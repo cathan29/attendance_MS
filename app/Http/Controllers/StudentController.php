@@ -4,41 +4,153 @@ namespace App\Http\Controllers;
 
 use App\Models\Strand;
 use App\Models\Student;
+use App\Models\AuditLog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class StudentController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
+        $search = trim((string) $request->query('q', ''));
+        $studentsQuery = Student::with('strand')
+            ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
+                $query->where('student_id', 'like', "%{$search}%")
+                    ->orWhere('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('year_level', 'like', "%{$search}%")
+                    ->orWhere('section', 'like', "%{$search}%")
+                    ->orWhereHas('strand', fn ($strand) => $strand->where('strand_name', 'like', "%{$search}%"));
+            }))
+            ->orderBy('year_level')
+            ->orderBy('section')
+            ->orderBy('last_name');
+
+        $students = (clone $studentsQuery)
+            ->paginate(10)
+            ->withQueryString();
+
+        $sectionStudents = (clone $studentsQuery)->get();
+
         return view('students.index', [
-            'students' => Student::with('strand')->orderBy('year_level')->orderBy('section')->orderBy('last_name')->get(),
+            'students' => $students,
+            'studentsBySection' => $sectionStudents->groupBy(fn (Student $student) => $student->strand->strand_name . '|' . $student->year_level . '|' . $student->section),
             'strands' => Strand::orderBy('strand_name')->get(),
+            'sections' => $this->sections(),
+            'search' => $search,
+            'nextStudentId' => $this->nextStudentId(),
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
+        $this->normalizeNameInput($request);
+
         $data = $request->validate([
-            'student_id' => ['required', 'string', 'max:50'],
-            'first_name' => ['required', 'string', 'max:100'],
-            'middle_name' => ['nullable', 'string', 'max:100'],
-            'last_name' => ['required', 'string', 'max:100'],
+            'first_name' => ['required', 'string', 'max:100', 'regex:/^[A-Za-zÑñ .\'-]+$/'],
+            'middle_name' => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-zÑñ .\'-]+$/'],
+            'last_name' => ['required', 'string', 'max:100', 'regex:/^[A-Za-zÑñ .\'-]+$/'],
             'strand_id' => ['required', 'exists:strands,id'],
             'year_level' => ['required', 'in:11,12'],
-            'section' => ['nullable', 'string', 'max:50'],
+            'section' => ['required', Rule::in($this->sections())],
         ]);
 
-        Student::updateOrCreate(['student_id' => $data['student_id']], $data);
+        $duplicate = Student::where('first_name', $data['first_name'])
+            ->where('last_name', $data['last_name'])
+            ->where('strand_id', $data['strand_id'])
+            ->where('year_level', $data['year_level'])
+            ->where('section', $data['section'])
+            ->exists();
+
+        if ($duplicate) {
+            return back()
+                ->withErrors(['first_name' => 'A student with the same name and class already exists.'])
+                ->withInput();
+        }
+
+        $data['student_id'] = $this->nextStudentId();
+
+        $student = Student::create($data);
+        AuditLog::record('student_created', "Created student {$student->student_id}: {$student->last_name}, {$student->first_name}", $student, null, $student->toArray());
 
         return back()->with('success', 'Student saved successfully.');
     }
 
+    public function update(Request $request, Student $student): RedirectResponse
+    {
+        $this->normalizeNameInput($request);
+
+        $data = $request->validate([
+            'first_name' => ['required', 'string', 'max:100', 'regex:/^[A-Za-zÑñ .\'-]+$/'],
+            'middle_name' => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-zÑñ .\'-]+$/'],
+            'last_name' => ['required', 'string', 'max:100', 'regex:/^[A-Za-zÑñ .\'-]+$/'],
+            'strand_id' => ['required', 'exists:strands,id'],
+            'year_level' => ['required', 'in:11,12'],
+            'section' => ['required', Rule::in($this->sections())],
+        ]);
+
+        $duplicate = Student::whereKeyNot($student->student_id)
+            ->where('first_name', $data['first_name'])
+            ->where('last_name', $data['last_name'])
+            ->where('strand_id', $data['strand_id'])
+            ->where('year_level', $data['year_level'])
+            ->where('section', $data['section'])
+            ->exists();
+
+        if ($duplicate) {
+            return back()
+                ->withErrors(['first_name' => 'Another student with the same name and class already exists.'])
+                ->withInput();
+        }
+
+        $oldValues = $student->only(['first_name', 'middle_name', 'last_name', 'strand_id', 'year_level', 'section']);
+        $student->update($data);
+        AuditLog::record('student_updated', "Updated student {$student->student_id}: {$student->last_name}, {$student->first_name}", $student, $oldValues, $student->only(array_keys($oldValues)));
+
+        return back()->with('success', 'Student updated successfully.');
+    }
+
     public function destroy(Student $student): RedirectResponse
     {
+        $oldValues = $student->toArray();
+        AuditLog::record('student_deleted', "Deleted student {$student->student_id}: {$student->last_name}, {$student->first_name}", $student, $oldValues, null);
         $student->delete();
 
         return back()->with('success', 'Student deleted.');
+    }
+
+    private function nextStudentId(): string
+    {
+        $year = (string) now()->year;
+        $lastSequence = Student::query()
+            ->where('student_id', 'like', "{$year}%")
+            ->pluck('student_id')
+            ->filter(fn (string $studentId) => ctype_digit($studentId) && str_starts_with($studentId, $year))
+            ->map(fn (string $studentId) => (int) substr($studentId, 4))
+            ->max() ?? 0;
+
+        do {
+            $lastSequence++;
+            $studentId = $year . str_pad((string) $lastSequence, 3, '0', STR_PAD_LEFT);
+        } while (Student::whereKey($studentId)->exists());
+
+        return $studentId;
+    }
+
+    private function normalizeNameInput(Request $request): void
+    {
+        $request->merge([
+            'first_name' => trim((string) $request->input('first_name')),
+            'middle_name' => trim((string) $request->input('middle_name')) ?: null,
+            'last_name' => trim((string) $request->input('last_name')),
+            'section' => strtoupper(trim((string) $request->input('section'))),
+        ]);
+    }
+
+    private function sections(): array
+    {
+        return config('school.sections', ['A', 'B', 'C', 'D', 'E', 'F']);
     }
 }

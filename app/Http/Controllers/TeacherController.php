@@ -2,53 +2,169 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class TeacherController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
+        $search = trim((string) $request->query('q', ''));
+
         return view('teachers.index', [
-            'teachers' => User::where('role', 'teacher')->orderBy('last_name')->orderBy('first_name')->get(),
+            'teachers' => User::withTrashed()
+                ->where('role', 'teacher')
+                ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
+                    $query->where('employee_id', 'like', "%{$search}%")
+                        ->orWhere('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('status', 'like', "%{$search}%");
+                }))
+                ->orderBy('last_name')
+                ->orderBy('first_name')
+                ->get(),
+            'search' => $search,
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
+        $request->merge([
+            'first_name' => trim((string) $request->input('first_name')),
+            'middle_name' => trim((string) $request->input('middle_name')) ?: null,
+            'last_name' => trim((string) $request->input('last_name')),
+        ]);
+
         $data = $request->validate([
-            'employee_id' => ['required', 'string', 'max:50'],
-            'first_name' => ['required', 'string', 'max:100'],
-            'middle_name' => ['nullable', 'string', 'max:100'],
-            'last_name' => ['required', 'string', 'max:100'],
-            'password' => ['nullable', 'string', 'min:6'],
+            'first_name' => ['required', 'string', 'max:100', 'regex:/^[A-Za-zÑñ .\'-]+$/'],
+            'middle_name' => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-zÑñ .\'-]+$/'],
+            'last_name' => ['required', 'string', 'max:100', 'regex:/^[A-Za-zÑñ .\'-]+$/'],
             'status' => ['required', 'in:active,inactive'],
         ]);
 
-        $teacher = User::firstOrNew(['employee_id' => $data['employee_id']]);
-        $teacher->fill([
+        $duplicate = User::where('role', 'teacher')
+            ->where('first_name', $data['first_name'])
+            ->where('last_name', $data['last_name'])
+            ->withTrashed()
+            ->exists();
+
+        if ($duplicate) {
+            return back()
+                ->withErrors(['first_name' => 'A teacher with the same first and last name already exists.'])
+                ->withInput();
+        }
+
+        $employeeId = $this->nextEmployeeId();
+        $temporaryPassword = $this->generateTemporaryPassword();
+
+        $teacher = User::create([
+            'employee_id' => $employeeId,
             'first_name' => $data['first_name'],
             'middle_name' => $data['middle_name'] ?? null,
             'last_name' => $data['last_name'],
+            'password' => Hash::make($temporaryPassword),
             'role' => 'teacher',
             'status' => $data['status'],
+            'must_update_credentials' => true,
         ]);
-        if (!$teacher->exists || filled($data['password'] ?? null)) {
-            $teacher->password = Hash::make($data['password'] ?: 'Teacher@123');
-        }
-        $teacher->save();
+        AuditLog::record('teacher_created', "Created teacher {$teacher->employee_id}: {$teacher->last_name}, {$teacher->first_name}", $teacher, null, $teacher->only(['employee_id', 'first_name', 'last_name', 'status']));
 
-        return back()->with('success', 'Teacher saved successfully.');
+        return back()
+            ->with('success', 'Teacher account created. Share the temporary credentials securely.')
+            ->with('generated_teacher', [
+                'employee_id' => $employeeId,
+                'password' => $temporaryPassword,
+            ]);
     }
 
     public function destroy(User $teacher): RedirectResponse
     {
         abort_unless($teacher->role === 'teacher', 404);
+        $oldValues = $teacher->only(['employee_id', 'first_name', 'last_name', 'email', 'status']);
+        $teacher->forceFill(['status' => 'inactive'])->save();
         $teacher->delete();
+        AuditLog::record('teacher_archived', "Archived teacher {$teacher->employee_id}: {$teacher->last_name}, {$teacher->first_name}", $teacher, $oldValues, $teacher->only(['employee_id', 'first_name', 'last_name', 'email', 'status']));
 
-        return back()->with('success', 'Teacher deleted.');
+        return back()->with('success', 'Teacher archived. Historical reports will still show this teacher.');
+    }
+
+    public function updateStatus(Request $request, User $teacher): RedirectResponse
+    {
+        abort_unless($teacher->role === 'teacher', 404);
+
+        $data = $request->validate([
+            'status' => ['required', 'in:active,inactive'],
+        ]);
+
+        $oldValues = $teacher->only(['status']);
+        $teacher->forceFill(['status' => $data['status']])->save();
+        AuditLog::record('teacher_status_updated', "Updated status for teacher {$teacher->employee_id}: {$teacher->status}", $teacher, $oldValues, $teacher->only(['status']));
+
+        return back()->with('success', 'Teacher status updated.');
+    }
+
+    public function restore(string $teacher): RedirectResponse
+    {
+        $teacher = User::withTrashed()
+            ->where('role', 'teacher')
+            ->findOrFail($teacher);
+
+        $oldValues = [
+            'status' => $teacher->status,
+            'deleted_at' => $teacher->deleted_at,
+        ];
+
+        $teacher->restore();
+        $teacher->forceFill(['status' => 'active'])->save();
+
+        AuditLog::record('teacher_restored', "Restored teacher {$teacher->employee_id}: {$teacher->last_name}, {$teacher->first_name}", $teacher, $oldValues, [
+            'status' => $teacher->status,
+            'deleted_at' => $teacher->deleted_at,
+        ]);
+
+        return back()->with('success', 'Teacher restored and marked active.');
+    }
+
+    public function resetPassword(User $teacher): RedirectResponse
+    {
+        abort_unless($teacher->role === 'teacher', 404);
+
+        $temporaryPassword = $this->generateTemporaryPassword();
+        $teacher->forceFill([
+            'password' => Hash::make($temporaryPassword),
+            'must_update_credentials' => true,
+        ])->save();
+        AuditLog::record('teacher_password_reset', "Reset password for teacher {$teacher->employee_id}: {$teacher->last_name}, {$teacher->first_name}", $teacher);
+
+        return back()
+            ->with('success', 'Teacher password reset. Share the temporary credentials securely.')
+            ->with('generated_teacher', [
+                'employee_id' => $teacher->employee_id,
+                'password' => $temporaryPassword,
+            ]);
+    }
+
+    private function nextEmployeeId(): string
+    {
+        $year = now()->year;
+        $prefix = "CA-{$year}";
+        $latest = User::where('employee_id', 'like', $prefix . '%')
+            ->orderByDesc('employee_id')
+            ->value('employee_id');
+
+        $next = $latest ? ((int) substr($latest, -3)) + 1 : 1;
+
+        return $prefix . str_pad((string) $next, 3, '0', STR_PAD_LEFT);
+    }
+
+    private function generateTemporaryPassword(): string
+    {
+        return 'CA-' . Str::upper(Str::random(4)) . random_int(1000, 9999);
     }
 }
