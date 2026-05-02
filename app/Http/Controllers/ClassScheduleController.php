@@ -31,7 +31,8 @@ class ClassScheduleController extends Controller
                 }))
                 ->orderBy('day_of_week')
                 ->orderBy('start_time')
-                ->get(),
+                ->paginate(10)
+                ->withQueryString(),
             'days' => $this->days(),
             'search' => $search,
         ]);

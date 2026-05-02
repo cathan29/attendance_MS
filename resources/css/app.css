@@ -3706,6 +3706,15 @@ body {
     cursor: not-allowed;
 }
 
+[data-ajax-panel] {
+    transition: opacity .16s ease;
+}
+
+[data-ajax-panel].is-ajax-loading {
+    opacity: .55;
+    pointer-events: none;
+}
+
 .record-name,
 .student-name {
     font-weight: 700;
@@ -4035,4 +4044,596 @@ body {
         width: 20px !important;
         height: 20px !important;
     }
+}
+
+/* Collapsible desktop sidebar */
+@media (min-width: 769px) {
+    .app-shell {
+        grid-template-columns: 82px minmax(0, 1fr);
+    }
+
+    .sidebar {
+        width: 82px;
+        overflow: hidden;
+        gap: 12px;
+        padding: 14px 12px;
+        transition: width .22s ease, box-shadow .22s ease;
+        z-index: 80;
+    }
+
+    .sidebar:hover,
+    .sidebar:focus-within {
+        width: 260px;
+        box-shadow: 14px 0 36px rgba(15, 23, 42, .16);
+    }
+
+    .brand {
+        justify-content: center;
+        min-height: 54px;
+        padding: 8px;
+        white-space: nowrap;
+    }
+
+    .sidebar:hover .brand,
+    .sidebar:focus-within .brand {
+        justify-content: flex-start;
+    }
+
+    .brand > span:last-child,
+    .nav-text,
+    .user-copy,
+    .account-actions {
+        max-width: 0;
+        overflow: hidden;
+        opacity: 0;
+        pointer-events: none;
+        transform: translateX(-8px);
+        transition: max-width .18s ease, opacity .16s ease, transform .16s ease;
+        white-space: nowrap;
+    }
+
+    .sidebar:hover .brand > span:last-child,
+    .sidebar:focus-within .brand > span:last-child,
+    .sidebar:hover .nav-text,
+    .sidebar:focus-within .nav-text,
+    .sidebar:hover .user-copy,
+    .sidebar:focus-within .user-copy,
+    .sidebar:hover .account-actions,
+    .sidebar:focus-within .account-actions {
+        max-width: 180px;
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateX(0);
+    }
+
+    .sidebar:hover .brand > span:last-child,
+    .sidebar:focus-within .brand > span:last-child {
+        max-width: 170px;
+    }
+
+    .sidebar:hover .nav-text,
+    .sidebar:focus-within .nav-text {
+        max-width: 160px;
+    }
+
+    .nav-list a {
+        justify-content: center;
+        gap: 0;
+        padding: 0;
+    }
+
+    .sidebar:hover .nav-list a,
+    .sidebar:focus-within .nav-list a {
+        justify-content: flex-start;
+        gap: 10px;
+        padding: 0 10px;
+    }
+
+    .nav-list a::before {
+        display: none;
+    }
+
+    .nav-icon {
+        display: inline-flex;
+    }
+
+    .nav-list a.active {
+        color: #fff;
+        background: rgba(147, 197, 253, .16);
+    }
+
+    .nav-list a.active .nav-icon {
+        color: #93c5fd;
+    }
+
+    .account-card {
+        align-items: center;
+        width: 58px;
+        min-width: 58px;
+        padding: 10px;
+        transition: width .22s ease;
+    }
+
+    .account-main {
+        justify-content: center;
+    }
+
+    .sidebar:hover .account-main,
+    .sidebar:focus-within .account-main {
+        justify-content: flex-start;
+    }
+
+    .sidebar:hover .account-card,
+    .sidebar:focus-within .account-card {
+        width: 236px;
+    }
+
+    .logout-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+    }
+
+    .logout-icon {
+        display: inline-flex;
+    }
+}
+
+/* School image trial background for authenticated pages */
+.main-content {
+    position: relative;
+    isolation: isolate;
+    background:
+        linear-gradient(180deg, rgba(245, 247, 250, .92), rgba(245, 247, 250, .88)),
+        var(--school-bg-image) center / cover fixed no-repeat;
+}
+
+.main-content::before {
+    content: "";
+    position: fixed;
+    inset: 0 0 0 82px;
+    z-index: -1;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, .70), rgba(255, 255, 255, .84)),
+        var(--school-bg-image) center / cover no-repeat;
+    opacity: .52;
+    pointer-events: none;
+}
+
+@media (max-width: 768px) {
+    .main-content {
+        background:
+            linear-gradient(180deg, rgba(245, 247, 250, .94), rgba(245, 247, 250, .90)),
+            var(--school-bg-image) center / cover fixed no-repeat;
+    }
+
+    .main-content::before {
+        inset: 0;
+        opacity: .38;
+    }
+}
+
+/* School-background aligned palette */
+:root {
+    --bg: #f3eee6;
+    --surface: rgba(255, 253, 249, .95);
+    --surface-soft: #fbf6ef;
+    --ink: #1f2a37;
+    --muted: #746b60;
+    --line: #e2d6c8;
+    --primary: #173b63;
+    --primary-strong: #0f2948;
+    --primary-soft: #eaf1f7;
+    --gold: #bd8f34;
+    --gold-soft: #fff5dd;
+    --brick: #8a3f2a;
+    --brick-soft: #f7e9e1;
+    --success: #2f6c55;
+    --success-soft: #e7f2ed;
+    --warning: #9a640f;
+    --warning-soft: #fff1d2;
+    --danger: #a54036;
+    --danger-soft: #fae9e5;
+    --sidebar: #0c223d;
+    --sidebar-2: #132f52;
+    --shadow: 0 14px 34px rgba(79, 52, 28, .10), 0 1px 2px rgba(31, 42, 55, .08);
+}
+
+body {
+    background: #efe7dc;
+    color: var(--ink);
+}
+
+.sidebar {
+    background:
+        linear-gradient(180deg, rgba(12, 34, 61, .98), rgba(19, 47, 82, .96)),
+        var(--sidebar);
+    border-right-color: rgba(255, 245, 221, .14);
+}
+
+.brand,
+.account-card {
+    background: rgba(255, 245, 221, .07);
+    border-color: rgba(255, 245, 221, .13);
+}
+
+.brand small,
+.sidebar-user small {
+    color: #c9d2dd;
+}
+
+.nav-list a {
+    color: #d5dde8;
+}
+
+.nav-list a.active,
+.nav-list a:hover {
+    background: rgba(189, 143, 52, .16);
+}
+
+.nav-list a.active .nav-icon {
+    color: #f0c766;
+}
+
+.avatar {
+    background: linear-gradient(135deg, #fff5dd, #d7ad59);
+    color: #0f2948;
+}
+
+.main-content {
+    background:
+        linear-gradient(180deg, rgba(243, 238, 230, .90), rgba(243, 238, 230, .86)),
+        var(--school-bg-image) center / cover fixed no-repeat;
+}
+
+.main-content::before {
+    background:
+        linear-gradient(135deg, rgba(255, 253, 249, .72), rgba(244, 236, 224, .86)),
+        var(--school-bg-image) center / cover no-repeat;
+    opacity: .62;
+}
+
+.page-header {
+    border-bottom-color: rgba(138, 63, 42, .18);
+}
+
+.panel,
+.stat-card,
+.student-form-panel,
+.student-summary-grid article,
+.report-hero-card,
+.report-kpi-grid article,
+.table-responsive,
+.pagination-shell {
+    background: var(--surface);
+    border-color: var(--line);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(8px);
+}
+
+.table thead th {
+    background: #f4eee6;
+    color: #6a5b4c;
+}
+
+.table tbody tr:hover {
+    background: rgba(234, 241, 247, .72);
+}
+
+.btn-primary {
+    background: var(--primary);
+}
+
+.btn-primary:hover {
+    background: var(--primary-strong);
+}
+
+.btn-outline-primary {
+    border-color: #cabba7;
+    color: var(--primary-strong);
+}
+
+.btn-outline-primary:hover {
+    border-color: var(--primary);
+    background: var(--primary-soft);
+}
+
+.chip-light,
+.topbar-pill {
+    border-color: #ead6a6;
+    background: var(--gold-soft);
+    color: #6d4a13;
+}
+
+.badge-present {
+    background: var(--success-soft);
+    color: var(--success);
+}
+
+.badge-late {
+    background: var(--warning-soft);
+    color: var(--warning);
+}
+
+.badge-absent {
+    background: var(--danger-soft);
+    color: var(--danger);
+}
+
+@media (max-width: 768px) {
+    .main-content {
+        background:
+            linear-gradient(180deg, rgba(243, 238, 230, .94), rgba(243, 238, 230, .90)),
+            var(--school-bg-image) center / cover fixed no-repeat;
+    }
+
+    .main-content::before {
+        opacity: .42;
+    }
+}
+
+/* Cleaner student section modal */
+.section-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 9500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 28px;
+    background: rgba(15, 23, 42, .54);
+    backdrop-filter: blur(10px);
+}
+
+.section-modal-backdrop[hidden] {
+    display: none;
+}
+
+.student-section-modal,
+.section-modal.student-section-modal {
+    display: flex;
+    flex-direction: column;
+    width: min(880px, calc(100vw - 56px));
+    max-height: min(760px, calc(100vh - 56px));
+    overflow: hidden;
+    border: 1px solid rgba(226, 214, 200, .95);
+    border-radius: 10px;
+    background: rgba(255, 253, 249, .98);
+    box-shadow: 0 28px 80px rgba(15, 23, 42, .32);
+    transform: translateY(0);
+}
+
+.section-modal:not(.student-section-modal) {
+    display: flex;
+    flex-direction: column;
+    width: min(1180px, calc(100vw - 56px));
+    max-height: min(780px, calc(100vh - 56px));
+    overflow: hidden;
+    border: 1px solid rgba(226, 214, 200, .95);
+    border-radius: 10px;
+    background: rgba(255, 253, 249, .98);
+    box-shadow: 0 28px 80px rgba(15, 23, 42, .32);
+}
+
+.section-modal:not(.student-section-modal) .section-modal-head {
+    flex: 0 0 auto;
+    align-items: center;
+    padding: 18px 22px;
+    background:
+        linear-gradient(135deg, rgba(234, 241, 247, .92), rgba(255, 245, 221, .68)),
+        #fffdf9;
+}
+
+.section-modal:not(.student-section-modal) .section-modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+    padding: 18px 22px 22px;
+}
+
+.section-modal:not(.student-section-modal) .modal-list {
+    gap: 12px;
+}
+
+.section-modal:not(.student-section-modal) .modal-edit-row {
+    grid-template-columns: minmax(190px, .8fr) repeat(3, minmax(140px, 1fr));
+}
+
+.section-modal:not(.student-section-modal) .modal-edit-row .btn {
+    grid-column: 4;
+}
+
+.student-section-modal .section-modal-head {
+    flex: 0 0 auto;
+    align-items: center;
+    padding: 18px 22px;
+    background:
+        linear-gradient(135deg, rgba(234, 241, 247, .92), rgba(255, 245, 221, .68)),
+        #fffdf9;
+}
+
+.student-section-modal .section-modal-head h2 {
+    color: var(--ink);
+    font-size: 21px;
+    line-height: 1.2;
+}
+
+.student-section-modal .section-modal-close {
+    width: 38px;
+    height: 38px;
+    border-color: #ddccb8;
+    border-radius: 8px;
+    background: #fffdf9;
+    color: #756b60;
+    line-height: 1;
+}
+
+.student-section-modal .section-modal-close:hover {
+    border-color: var(--brick);
+    color: var(--brick);
+}
+
+.student-section-modal .section-modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+    padding: 18px 22px 22px;
+}
+
+.student-section-modal .section-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.student-section-modal .table-responsive {
+    max-height: 390px;
+    overflow: auto;
+}
+
+.student-section-modal .table {
+    margin-bottom: 0;
+}
+
+.student-section-modal .table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+@media (max-width: 768px) {
+    .section-modal-backdrop {
+        align-items: stretch;
+        padding: 12px;
+    }
+
+    .student-section-modal,
+    .section-modal.student-section-modal,
+    .section-modal:not(.student-section-modal) {
+        width: 100%;
+        max-height: calc(100vh - 24px);
+    }
+
+    .student-section-modal .section-modal-head {
+        padding: 14px;
+    }
+
+    .student-section-modal .section-modal-head h2 {
+        font-size: 18px;
+    }
+
+    .student-section-modal .section-modal-body {
+        padding: 14px;
+    }
+
+    .section-modal:not(.student-section-modal) .section-modal-head,
+    .section-modal:not(.student-section-modal) .section-modal-body {
+        padding: 14px;
+    }
+
+    .section-modal:not(.student-section-modal) .modal-edit-row {
+        grid-template-columns: 1fr;
+    }
+
+    .section-modal:not(.student-section-modal) .modal-edit-row .btn {
+        grid-column: auto;
+    }
+
+    .student-section-modal .section-summary {
+        grid-template-columns: 1fr;
+    }
+}
+
+.admin-calendar-sidebar .calendar-widget,
+.admin-calendar-sidebar .schedule-widget {
+    background: rgba(251, 246, 239, .88);
+}
+
+.admin-calendar-widget-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.admin-calendar-widget-head h4 {
+    margin-bottom: 0;
+}
+
+.admin-calendar-widget-head .chip-light {
+    flex: 0 0 auto;
+    max-width: 148px;
+    white-space: normal;
+    text-align: right;
+    line-height: 1.2;
+}
+
+.admin-calendar-days {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.calendar-day-name,
+.calendar-date {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+.calendar-day-name {
+    color: var(--muted);
+    font-weight: 800;
+}
+
+.calendar-date {
+    position: relative;
+    background: rgba(255, 255, 255, .74);
+    color: var(--ink);
+    font-weight: 750;
+}
+
+.calendar-date.is-weekend {
+    color: #9a640f;
+    background: rgba(255, 241, 210, .82);
+}
+
+.calendar-date.is-holiday {
+    color: #fff;
+    background: var(--brick);
+}
+
+.calendar-date.is-today {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+}
+
+.calendar-date.is-empty {
+    background: transparent;
+}
+
+.holiday-item {
+    border-left-color: var(--brick);
+}
+
+.holiday-type {
+    display: inline-flex;
+    width: fit-content;
+    margin-top: 7px;
+    padding: 3px 7px;
+    border-radius: 999px;
+    background: var(--gold-soft);
+    color: #6d4a13;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: capitalize;
+}
+
+.admin-calendar-btn::after {
+    content: "Calendar";
 }

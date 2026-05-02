@@ -7,6 +7,7 @@
     </div>
     <a class="btn btn-outline-primary" href="{{ route('admin.attendance.export', request()->query()) }}">Export CSV</a>
 </div>
+<div data-ajax-panel="attendance-records">
 <section class="panel mb-4">
     <form method="GET" action="{{ route('admin.attendance.index') }}" class="action-bar">
         <div class="col-md-4"><label class="form-label">Search</label><input class="form-control" name="q" value="{{ request('q') }}" placeholder="Live search student, teacher, subject, remarks" data-live-search data-live-search-target="#attendanceRecords tbody tr"></div>
@@ -43,4 +44,5 @@
     </div>
     {{ $records->links() }}
 </section>
+</div>
 @endsection

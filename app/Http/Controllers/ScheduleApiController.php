@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ClassAssignment;
 use App\Models\ClassSchedule;
+use App\Services\ExternalApiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -83,6 +84,35 @@ class ScheduleApiController extends Controller
 
         return response()->json([
             'classes' => $classes,
+        ]);
+    }
+
+    public function schoolCalendar(Request $request): JsonResponse
+    {
+        abort_unless(auth()->user()?->role === 'admin', 403);
+
+        $today = Carbon::today();
+        $holidays = collect(ExternalApiService::getSchoolHolidays())
+            ->map(fn (array $holiday) => [
+                'date' => $holiday['date'],
+                'name' => $holiday['name'],
+                'type' => $holiday['type'] ?? 'holiday',
+            ])
+            ->sortBy('date')
+            ->values();
+        $todayHoliday = $holidays->firstWhere('date', $today->toDateString());
+
+        return response()->json([
+            'date' => $today->toDateString(),
+            'month' => $today->format('F Y'),
+            'is_weekend' => $today->isWeekend(),
+            'is_no_class_day' => $today->isWeekend() || $todayHoliday !== null,
+            'today_label' => $todayHoliday['name'] ?? ($today->isWeekend() ? 'Weekend' : 'Regular school day'),
+            'holidays' => $holidays,
+            'upcoming' => $holidays
+                ->filter(fn (array $holiday) => $holiday['date'] >= $today->toDateString())
+                ->take(5)
+                ->values(),
         ]);
     }
 }

@@ -8,7 +8,7 @@
     </div>
 </div>
 
-<section class="panel mb-4">
+<section class="panel mb-4" data-ajax-panel="curriculum-subjects">
     <h2>Class Assignment</h2>
     <form method="POST" action="{{ route('admin.curriculum.store') }}" class="row">
         @csrf
@@ -98,7 +98,7 @@
                     @php($key = $strand->strand_name . '|' . $grade . '|' . $section)
                     @php($modalId = 'section-' . md5($key))
                     @php($sectionStudents = $studentsBySection->get($key, collect()))
-                    @php($sectionAssignments = $assignments->where('strand_id', $strand->id)->where('year_level', $grade)->where('section', $section))
+                    @php($sectionAssignments = $assignmentsForSections->where('strand_id', $strand->id)->where('year_level', $grade)->where('section', $section))
                     @if($sectionStudents->isNotEmpty() || $sectionAssignments->isNotEmpty())
                         <button type="button" class="section-tile" data-modal-target="{{ $modalId }}">
                             <span>Grade {{ $grade }}</span>
@@ -385,7 +385,7 @@
 <section class="panel">
     <div class="section-title">
         <h2>Teacher Loads</h2>
-        <span class="chip-light">{{ $assignments->count() }} assignments</span>
+        <span class="chip-light">{{ $assignments->total() }} assignments</span>
     </div>
     <form method="GET" action="{{ route('admin.curriculum.index') }}" class="search-bar">
         <input class="form-control" name="q" value="{{ $search }}" placeholder="Live search teacher, subject, strand, section, school year, or semester" data-live-search data-live-search-target="#curriculumLoads tbody tr">
@@ -422,6 +422,7 @@
             </tbody>
         </table>
     </div>
+    {{ $assignments->links() }}
 </section>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -466,8 +467,14 @@
         document.querySelectorAll('[data-modal-target]').forEach((button) => {
             button.addEventListener('click', () => {
                 const modal = document.getElementById(button.dataset.modalTarget);
+                if (!modal) {
+                    return;
+                }
+
+                document.body.appendChild(modal);
                 modal.hidden = false;
                 document.body.classList.add('modal-open');
+                modal.querySelector('input, button, select')?.focus();
             });
         });
 

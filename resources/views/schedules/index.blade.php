@@ -37,10 +37,10 @@
     </form>
 </section>
 
-<section class="panel">
+<section class="panel" data-ajax-panel="schedules">
     <div class="section-title">
         <h2>Weekly Schedule</h2>
-        <span class="chip-light">{{ $schedules->count() }} slots</span>
+        <span class="chip-light">{{ $schedules->total() }} slots</span>
     </div>
     <form method="GET" action="{{ route('admin.schedules.index') }}" class="search-bar">
         <input class="form-control" name="q" value="{{ $search }}" placeholder="Live search teacher, subject, class, room" data-live-search data-live-search-target="#scheduleTable tbody tr">
@@ -74,5 +74,6 @@
             </tbody>
         </table>
     </div>
+    {{ $schedules->links() }}
 </section>
 @endsection

@@ -273,24 +273,56 @@ php artisan serve
 http://127.0.0.1:8000
 ```
 
-## Default Admin Login
+## Default Login Credentials
+
+The login form accepts either an email address or an employee ID.
+
+### Admin Login
 
 ```text
 Employee ID: ADMIN-001
+Email: admin@cipheracademy.edu
 Password: Admin@123
 ```
 
 Change the default password after first login.
 
-## Seeded Teacher Logins
+### Seeded Teacher Logins
 
 Seeded teacher accounts use the following sample credentials:
 
 ```text
-CA-T-001 / Cipher@1001
-CA-T-002 / Cipher@1002
-CA-T-003 / Cipher@1003
-CA-T-004 / Cipher@1004
+Employee ID: CA-T-001
+Email: maria.santos@cipheracademy.edu
+Password: Cipher@1001
+
+Employee ID: CA-T-002
+Email: jose.reyes@cipheracademy.edu
+Password: Cipher@1002
+
+Employee ID: CA-T-003
+Email: ana.cruz@cipheracademy.edu
+Password: Cipher@1003
+
+Employee ID: CA-T-004
+Email: ramon.garcia@cipheracademy.edu
+Password: Cipher@1004
+
+Employee ID: CA-T-005
+Email: leah.flores@cipheracademy.edu
+Password: Cipher@1005
+
+Employee ID: CA-T-006
+Email: paolo.navarro@cipheracademy.edu
+Password: Cipher@1006
+
+Employee ID: CA-T-007
+Email: clarissa.mendoza@cipheracademy.edu
+Password: Cipher@1007
+
+Employee ID: CA-T-008
+Email: victor.torres@cipheracademy.edu
+Password: Cipher@1008
 ```
 
 Teachers are required to update their password after receiving temporary credentials.

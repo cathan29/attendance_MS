@@ -62,7 +62,7 @@
     </section>
 
     <section class="student-summary-grid">
-        <article><span>Total Students</span><strong>{{ $students->count() }}</strong></article>
+        <article><span>Total Students</span><strong>{{ $students->total() }}</strong></article>
         <article><span>Active Sections</span><strong>{{ $studentsBySection->count() }}</strong></article>
         <article><span>Next ID</span><strong>{{ $nextStudentId }}</strong></article>
     </section>
@@ -72,7 +72,7 @@
     <div class="student-list-header">
         <div>
             <h2>Student Records</h2>
-            <p class="text-muted mb-0">{{ $students->count() }} records found</p>
+            <p class="text-muted mb-0">{{ $students->total() }} records found</p>
         </div>
         <form method="GET" action="{{ route('admin.students.index') }}" class="student-search">
             <input class="form-control" name="q" value="{{ $search }}" placeholder="Live search ID, name, strand, grade, or section" data-live-search data-live-search-target="#studentSections article, #studentRecords tbody tr">
@@ -158,6 +158,7 @@
             </tbody>
         </table>
     </div>
+    {{ $students->links() }}
 </section>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -168,6 +169,7 @@
                     return;
                 }
 
+                document.body.appendChild(modal);
                 modal.hidden = false;
                 document.body.classList.add('modal-open');
                 modal.querySelector('input, button')?.focus();

@@ -29,6 +29,7 @@ Route::post('/teacher/profile/credentials', [TeacherProfileController::class, 'u
 Route::middleware('auth')->prefix('api')->name('api.')->group(function () {
     Route::get('/schedules/today', [ScheduleApiController::class, 'todaySchedule'])->name('schedules.today');
     Route::get('/classes/upcoming', [ScheduleApiController::class, 'upcomingClasses'])->name('classes.upcoming');
+    Route::get('/school-calendar', [ScheduleApiController::class, 'schoolCalendar'])->name('school-calendar');
 });
 
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {

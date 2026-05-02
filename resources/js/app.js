@@ -54,9 +54,12 @@ document.addEventListener('DOMContentLoaded', () => {
     loadScheduleData();
     loadUpcomingClasses();
     loadWeatherData();
+    loadAdminSchoolCalendar();
 
     bindLiveSearch();
     bindAjaxAttendance();
+    bindAjaxAdminPanels();
+    bindGlobalAjaxPanelNavigation();
 });
 
 function bindToasts(root = document) {
@@ -110,6 +113,97 @@ function escapeHtml(value) {
         .replace(/'/g, '&#039;');
 }
 
+async function loadAdminSchoolCalendar() {
+    const calendar = document.getElementById('admin-calendar-container');
+    const holidays = document.getElementById('admin-holiday-container');
+    const status = document.getElementById('admin-calendar-status');
+    const monthTitle = document.getElementById('admin-calendar-month');
+
+    if (!calendar || !holidays) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/school-calendar', {
+            headers: {
+                'Accept': 'application/json',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error('Unable to load school calendar.');
+        }
+
+        const data = await response.json();
+        const today = new Date(`${data.date}T00:00:00`);
+        const year = today.getFullYear();
+        const month = today.getMonth();
+        const holidayByDate = new Map((data.holidays || []).map((holiday) => [holiday.date, holiday]));
+        const firstDay = new Date(year, month, 1).getDay();
+        const lastDate = new Date(year, month + 1, 0).getDate();
+
+        if (monthTitle) {
+            monthTitle.textContent = data.month || 'Calendar';
+        }
+
+        if (status) {
+            status.textContent = data.is_no_class_day ? data.today_label : 'Regular school day';
+        }
+
+        let calendarHtml = '<div class="admin-calendar-days">';
+        ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach((day) => {
+            calendarHtml += `<span class="calendar-day-name">${day}</span>`;
+        });
+
+        for (let i = 0; i < firstDay; i++) {
+            calendarHtml += '<span class="calendar-date is-empty"></span>';
+        }
+
+        for (let date = 1; date <= lastDate; date++) {
+            const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
+            const itemDate = new Date(`${dateKey}T00:00:00`);
+            const holiday = holidayByDate.get(dateKey);
+            const classes = [
+                'calendar-date',
+                date === today.getDate() ? 'is-today' : '',
+                holiday ? 'is-holiday' : '',
+                [0, 6].includes(itemDate.getDay()) ? 'is-weekend' : '',
+            ].filter(Boolean).join(' ');
+            const title = holiday ? ` title="${escapeHtml(holiday.name)}"` : '';
+            calendarHtml += `<span class="${classes}"${title}>${date}</span>`;
+        }
+
+        calendarHtml += '</div>';
+        calendar.innerHTML = calendarHtml;
+
+        const upcoming = data.upcoming || [];
+        holidays.innerHTML = upcoming.length > 0
+            ? upcoming.map((holiday) => `
+                <div class="schedule-item holiday-item">
+                    <div class="schedule-item-time">${escapeHtml(formatReadableDate(holiday.date))}</div>
+                    <div class="schedule-item-title">${escapeHtml(holiday.name)}</div>
+                    <span class="holiday-type">${escapeHtml(holiday.type || 'holiday')}</span>
+                </div>
+            `).join('')
+            : '<div class="schedule-placeholder">No upcoming holidays found.</div>';
+    } catch (error) {
+        if (status) {
+            status.textContent = 'Unavailable';
+        }
+        calendar.innerHTML = '<div class="calendar-placeholder">Unable to load calendar</div>';
+        holidays.innerHTML = '<div class="schedule-placeholder">Unable to load holidays</div>';
+    }
+}
+
+function formatReadableDate(dateString) {
+    const date = new Date(`${dateString}T00:00:00`);
+    return date.toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+    });
+}
+
 function bindLiveSearch(root = document) {
     root.querySelectorAll('[data-live-search]').forEach((input) => {
         if (input.dataset.boundLiveSearch) {
@@ -138,6 +232,138 @@ function bindLiveSearch(root = document) {
         input.addEventListener('input', filter);
         filter();
     });
+}
+
+function bindAjaxAdminPanels(root = document) {
+    root.querySelectorAll('[data-ajax-panel]').forEach((panel) => {
+        if (panel.dataset.boundAjaxPanel) {
+            return;
+        }
+
+        panel.dataset.boundAjaxPanel = 'true';
+        const panelName = panel.dataset.ajaxPanel;
+
+        panel.addEventListener('click', (event) => {
+            const link = event.target.closest('a');
+            if (!link || !panel.contains(link)) {
+                return;
+            }
+
+            if (!link.closest('.pagination-shell') && !link.classList.contains('btn-outline-primary')) {
+                return;
+            }
+
+            const url = new URL(link.href, window.location.href);
+            if (url.origin !== window.location.origin) {
+                return;
+            }
+
+            event.preventDefault();
+            loadAjaxPanel(panelName, url.toString());
+        });
+
+        panel.querySelectorAll('form').forEach((form) => {
+            if ((form.method || 'get').toLowerCase() !== 'get') {
+                return;
+            }
+
+            form.addEventListener('submit', (event) => {
+                event.preventDefault();
+                const url = `${form.action}?${new URLSearchParams(new FormData(form)).toString()}`;
+                loadAjaxPanel(panelName, url);
+            });
+        });
+    });
+}
+
+function bindGlobalAjaxPanelNavigation() {
+    if (document.body.dataset.boundGlobalAjaxPanels) {
+        return;
+    }
+
+    document.body.dataset.boundGlobalAjaxPanels = 'true';
+
+    document.addEventListener('click', (event) => {
+        const link = event.target.closest('a[href]');
+        const panel = link?.closest('[data-ajax-panel]');
+
+        if (!link || !panel) {
+            return;
+        }
+
+        const url = new URL(link.href, window.location.href);
+        if (url.origin !== window.location.origin) {
+            return;
+        }
+
+        const isPagination = Boolean(link.closest('.pagination-shell, nav[role="navigation"]'));
+        const isPanelControl = link.classList.contains('btn') || link.classList.contains('btn-outline-primary');
+
+        if (!isPagination && !isPanelControl) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        loadAjaxPanel(panel.dataset.ajaxPanel, url.toString());
+    }, true);
+
+    document.addEventListener('submit', (event) => {
+        const form = event.target.closest('form');
+        const panel = form?.closest('[data-ajax-panel]');
+
+        if (!form || !panel || (form.method || 'get').toLowerCase() !== 'get') {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        const url = `${form.action}?${new URLSearchParams(new FormData(form)).toString()}`;
+        loadAjaxPanel(panel.dataset.ajaxPanel, url);
+    }, true);
+}
+
+async function loadAjaxPanel(panelName, url) {
+    const currentPanel = document.querySelector(`[data-ajax-panel="${panelName}"]`);
+    if (!currentPanel) {
+        window.location.href = url;
+        return;
+    }
+
+    const scrollY = window.scrollY;
+    currentPanel.classList.add('is-ajax-loading');
+
+    try {
+        const response = await fetch(url, {
+            headers: {
+                'Accept': 'text/html',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error('Unable to load records.');
+        }
+
+        const html = await response.text();
+        const nextDocument = new DOMParser().parseFromString(html, 'text/html');
+        const nextPanel = nextDocument.querySelector(`[data-ajax-panel="${panelName}"]`);
+
+        if (!nextPanel) {
+            throw new Error('Updated panel was not found.');
+        }
+
+        currentPanel.replaceWith(nextPanel);
+        window.history.pushState({}, '', url);
+        window.scrollTo({ top: scrollY, behavior: 'auto' });
+
+        bindLiveSearch(nextPanel);
+        bindAjaxAdminPanels(nextPanel);
+        bindToasts(document);
+    } catch (error) {
+        currentPanel.classList.remove('is-ajax-loading');
+        showToast('danger', error.message || 'Unable to load records.');
+    }
 }
 
 function bindAjaxAttendance(root = document) {

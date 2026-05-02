@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body>
+<body style="--school-bg-image: url('{{ asset('images/school_background.png') }}');">
 <div class="app-shell">
     @php($role = strtolower((string) auth()->user()->role))
     <aside class="sidebar">
@@ -231,6 +231,44 @@
                 </div>
             </div>
         </div>
+        </aside>
+    @elseif($role === 'admin')
+        <button class="floating-menu-btn admin-calendar-btn" id="rightSidebarToggle" title="Toggle school calendar sidebar">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8 2v4"></path>
+                <path d="M16 2v4"></path>
+                <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+                <path d="M3 10h18"></path>
+            </svg>
+        </button>
+
+        <aside class="right-sidebar admin-calendar-sidebar" id="rightSidebar">
+            <div class="sidebar-header">
+                <h3>School Calendar</h3>
+                <button class="sidebar-close" id="rightSidebarClose" title="Close sidebar">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="sidebar-content">
+                <div class="calendar-widget admin-school-calendar">
+                    <div class="admin-calendar-widget-head">
+                        <h4 id="admin-calendar-month">Calendar</h4>
+                        <span class="chip-light" id="admin-calendar-status">Loading...</span>
+                    </div>
+                    <div id="admin-calendar-container">
+                        <div class="calendar-placeholder">Loading calendar...</div>
+                    </div>
+                </div>
+                <div class="schedule-widget admin-holiday-widget">
+                    <h4>Holidays & No-Class Days</h4>
+                    <div id="admin-holiday-container">
+                        <div class="schedule-placeholder">Loading holidays...</div>
+                    </div>
+                </div>
+            </div>
         </aside>
     @endif
 </div>

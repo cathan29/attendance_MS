@@ -15,7 +15,7 @@ class StudentController extends Controller
     public function index(Request $request): View
     {
         $search = trim((string) $request->query('q', ''));
-        $students = Student::with('strand')
+        $studentsQuery = Student::with('strand')
             ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
                 $query->where('student_id', 'like', "%{$search}%")
                     ->orWhere('first_name', 'like', "%{$search}%")
@@ -26,12 +26,17 @@ class StudentController extends Controller
             }))
             ->orderBy('year_level')
             ->orderBy('section')
-            ->orderBy('last_name')
-            ->get();
+            ->orderBy('last_name');
+
+        $students = (clone $studentsQuery)
+            ->paginate(10)
+            ->withQueryString();
+
+        $sectionStudents = (clone $studentsQuery)->get();
 
         return view('students.index', [
             'students' => $students,
-            'studentsBySection' => $students->groupBy(fn (Student $student) => $student->strand->strand_name . '|' . $student->year_level . '|' . $student->section),
+            'studentsBySection' => $sectionStudents->groupBy(fn (Student $student) => $student->strand->strand_name . '|' . $student->year_level . '|' . $student->section),
             'strands' => Strand::orderBy('strand_name')->get(),
             'sections' => $this->sections(),
             'search' => $search,

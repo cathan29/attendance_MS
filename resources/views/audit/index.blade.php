@@ -8,7 +8,7 @@
     </div>
 </div>
 
-<section class="panel">
+<section class="panel" data-ajax-panel="audit-logs">
     <div class="section-title">
         <h2>System Activity</h2>
         <span class="chip-light">{{ $logs->total() }} logs</span>

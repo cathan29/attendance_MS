@@ -50,24 +50,28 @@ class CurriculumController extends Controller
             ->get()
             ->groupBy(fn (Student $student) => $student->strand->strand_name . '|' . $student->year_level . '|' . $student->section);
 
+        $assignmentsQuery = ClassAssignment::with(['teacher', 'subject', 'strand'])
+            ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
+                $query->where('year_level', 'like', "%{$search}%")
+                    ->orWhere('section', 'like', "%{$search}%")
+                    ->orWhere('school_year', 'like', "%{$search}%")
+                    ->orWhere('semester', 'like', "%{$search}%")
+                    ->orWhereHas('teacher', fn ($teacher) => $teacher
+                        ->where('employee_id', 'like', "%{$search}%")
+                        ->orWhere('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%"))
+                    ->orWhereHas('subject', fn ($subject) => $subject->where('subject_name', 'like', "%{$search}%"))
+                    ->orWhereHas('strand', fn ($strand) => $strand->where('strand_name', 'like', "%{$search}%"));
+            }))
+            ->orderBy('year_level')
+            ->orderBy('section')
+            ->latest();
+
         return view('curriculum.index', [
-            'assignments' => ClassAssignment::with(['teacher', 'subject', 'strand'])
-                ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
-                    $query->where('year_level', 'like', "%{$search}%")
-                        ->orWhere('section', 'like', "%{$search}%")
-                        ->orWhere('school_year', 'like', "%{$search}%")
-                        ->orWhere('semester', 'like', "%{$search}%")
-                        ->orWhereHas('teacher', fn ($teacher) => $teacher
-                            ->where('employee_id', 'like', "%{$search}%")
-                            ->orWhere('first_name', 'like', "%{$search}%")
-                            ->orWhere('last_name', 'like', "%{$search}%"))
-                        ->orWhereHas('subject', fn ($subject) => $subject->where('subject_name', 'like', "%{$search}%"))
-                        ->orWhereHas('strand', fn ($strand) => $strand->where('strand_name', 'like', "%{$search}%"));
-                }))
-                ->orderBy('year_level')
-                ->orderBy('section')
-                ->latest()
-                ->get(),
+            'assignments' => (clone $assignmentsQuery)
+                ->paginate(10, ['*'], 'loads_page')
+                ->withQueryString(),
+            'assignmentsForSections' => (clone $assignmentsQuery)->get(),
             'teachers' => User::where('role', 'teacher')->where('status', 'active')->orderBy('last_name')->get(),
             'allTeachers' => User::withTrashed()->where('role', 'teacher')->orderBy('last_name')->get(),
             'subjects' => $subjects,
