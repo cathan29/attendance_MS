@@ -28,7 +28,7 @@
 <section class="panel">
     <div class="section-title">
         <h2>Teacher Accounts</h2>
-        <span class="chip-light">{{ $teachers->count() }} teachers</span>
+        <span class="chip-light">{{ $teachers->count() }} teacher records</span>
     </div>
     <form method="GET" action="{{ route('admin.teachers.index') }}" class="search-bar">
         <input class="form-control" name="q" value="{{ $search }}" placeholder="Live search employee ID, name, email, or status" data-live-search data-live-search-target="#teacherAccounts tbody tr">
@@ -47,20 +47,49 @@
         @forelse($teachers as $teacher)
             <tr>
                 <td>{{ $teacher->employee_id }}</td>
-                <td><span class="record-name">{{ $teacher->last_name }}, {{ $teacher->first_name }}</span></td>
-                <td>{{ $teacher->email ?: 'Not set' }}</td>
-                <td><span class="badge text-bg-{{ $teacher->status === 'active' ? 'success' : 'secondary' }}">{{ $teacher->status }}</span></td>
                 <td>
-                    <form method="POST" action="{{ route('admin.teachers.reset-password', $teacher) }}" onsubmit="return confirm('Reset password for this teacher?')">
-                        @csrf
-                        <button class="btn btn-sm btn-outline-primary">Reset Password</button>
-                    </form>
+                    <span class="record-name">{{ $teacher->last_name }}, {{ $teacher->first_name }}</span>
+                    @if($teacher->trashed())
+                        <span class="meta-line">Archived record</span>
+                    @endif
+                </td>
+                <td>{{ $teacher->email ?: 'Not set' }}</td>
+                <td>
+                    @if($teacher->trashed())
+                        <span class="badge text-bg-secondary">archived</span>
+                    @else
+                        <form method="POST" action="{{ route('admin.teachers.status', $teacher) }}" class="d-flex gap-2 align-items-center">
+                            @csrf @method('PATCH')
+                            <select class="form-select form-select-sm" name="status">
+                                <option value="active" @selected($teacher->status === 'active')>Active</option>
+                                <option value="inactive" @selected($teacher->status === 'inactive')>Inactive</option>
+                            </select>
+                            <button class="btn btn-sm btn-outline-primary">Save</button>
+                        </form>
+                    @endif
+                </td>
+                <td>
+                    @if($teacher->trashed())
+                        <span class="meta-line">Restore first</span>
+                    @else
+                        <form method="POST" action="{{ route('admin.teachers.reset-password', $teacher) }}" onsubmit="return confirm('Reset password for this teacher?')">
+                            @csrf
+                            <button class="btn btn-sm btn-outline-primary">Reset Password</button>
+                        </form>
+                    @endif
                 </td>
                 <td class="text-end">
-                    <form method="POST" action="{{ route('admin.teachers.destroy', $teacher) }}" onsubmit="return confirm('Delete this teacher?')">
-                        @csrf @method('DELETE')
-                        <button class="btn btn-sm btn-outline-danger">Delete</button>
-                    </form>
+                    @if($teacher->trashed())
+                        <form method="POST" action="{{ route('admin.teachers.restore', $teacher->id) }}" onsubmit="return confirm('Restore this teacher and mark as active?')">
+                            @csrf
+                            <button class="btn btn-sm btn-outline-primary">Restore</button>
+                        </form>
+                    @else
+                        <form method="POST" action="{{ route('admin.teachers.destroy', $teacher) }}" onsubmit="return confirm('Archive this teacher? Historical reports will still keep their name.')">
+                            @csrf @method('DELETE')
+                            <button class="btn btn-sm btn-outline-danger">Archive</button>
+                        </form>
+                    @endif
                 </td>
             </tr>
         @empty

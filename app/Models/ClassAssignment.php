@@ -14,11 +14,18 @@ class ClassAssignment extends Model
         'section',
         'school_year',
         'semester',
+        'semester_start_date',
+        'semester_end_date',
+    ];
+
+    protected $casts = [
+        'semester_start_date' => 'date',
+        'semester_end_date' => 'date',
     ];
 
     public function teacher()
     {
-        return $this->belongsTo(User::class, 'teacher_id');
+        return $this->belongsTo(User::class, 'teacher_id')->withTrashed();
     }
 
     public function subject()

@@ -6,11 +6,11 @@
         <p class="text-muted mb-0">Filter a class, choose a subject, then save one record per student.</p>
     </div>
 </div>
-<section class="panel mb-4 teacher-filter-panel">
-    <form method="GET" action="{{ route('teacher.attendance.create') }}" class="action-bar">
+<section class="panel mb-4 teacher-filter-panel" data-attendance-filter-panel>
+    <form method="GET" action="{{ route('teacher.attendance.create') }}" class="action-bar" data-attendance-load-form>
         <div class="col-md-6">
             <label class="form-label">Assigned Class</label>
-            <select class="form-select" name="assignment_id" required>
+            <select class="form-select" name="assignment_id" required data-attendance-autoload>
                 @foreach($assignments as $item)
                     <option value="{{ $item->id }}" @selected($assignmentId === $item->id)>
                         {{ $item->subject->subject_name }} / Grade {{ $item->year_level }} {{ $item->strand->strand_name }}-{{ $item->section }}
@@ -18,11 +18,11 @@
                 @endforeach
             </select>
         </div>
-        <div><label class="form-label">Date</label><input type="date" class="form-control" name="attendance_date" value="{{ $attendanceDate }}"></div>
+        <div><label class="form-label">Date</label><input type="date" class="form-control" name="attendance_date" value="{{ $attendanceDate }}" data-attendance-autoload></div>
         @if($schedules->isNotEmpty())
             <div class="col-md-3">
                 <label class="form-label">Schedule</label>
-                <select class="form-select" name="class_schedule_id">
+                <select class="form-select" name="class_schedule_id" data-attendance-autoload>
                     @foreach($schedules as $item)
                         <option value="{{ $item->id }}" @selected($schedule?->id === $item->id)>
                             {{ \Carbon\Carbon::parse($item->start_time)->format('h:i A') }} - {{ \Carbon\Carbon::parse($item->end_time)->format('h:i A') }} / {{ $item->room ?: 'TBA' }}
@@ -31,11 +31,11 @@
                 </select>
             </div>
         @endif
-        <button class="btn btn-outline-primary">Load Class</button>
+        <button class="btn btn-outline-primary" data-attendance-load-button>Load Class</button>
     </form>
 </section>
-<section class="panel teacher-attendance-panel">
-    <form method="POST" action="{{ route('teacher.attendance.store') }}">
+<section class="panel teacher-attendance-panel" data-attendance-panel>
+    <form method="POST" action="{{ route('teacher.attendance.store') }}" data-attendance-save-form>
         @csrf
         <input type="hidden" name="assignment_id" value="{{ $assignmentId }}">
         <input type="hidden" name="subject_id" value="{{ $subjectId }}">
@@ -59,6 +59,7 @@
             @forelse($students as $student)
                 @php($saved = $student->attendances->first())
                 @php($status = $saved->status ?? 'Present')
+                <input type="hidden" name="status[{{ $student->student_id }}]" value="{{ $status }}" data-attendance-status-value="{{ $student->student_id }}">
                 <article class="attendance-card">
                     <div class="attendance-card-head">
                         <div>
@@ -69,7 +70,7 @@
                     <div class="attendance-segment">
                         @foreach(['Present', 'Late', 'Absent'] as $option)
                             <label class="{{ strtolower($option) }}">
-                                <input type="radio" name="status[{{ $student->student_id }}]" value="{{ $option }}" @checked($status === $option)>
+                                <input type="radio" name="visual_status_card[{{ $student->student_id }}]" value="{{ $option }}" data-attendance-status-option="{{ $student->student_id }}" @checked($status === $option)>
                                 <span>{{ $option }}</span>
                             </label>
                         @endforeach
@@ -90,7 +91,7 @@
                     <tr>
                         <td><span class="student-name">{{ $student->last_name }}, {{ $student->first_name }}</span><span class="meta-line">{{ $student->student_id }} / {{ $student->year_level }}-{{ $student->section }}</span></td>
                         @foreach(['Present', 'Late', 'Absent'] as $option)
-                            <td><input class="form-check-input" type="radio" name="status[{{ $student->student_id }}]" value="{{ $option }}" @checked($status === $option)></td>
+                            <td><input class="form-check-input" type="radio" name="visual_status_table[{{ $student->student_id }}]" value="{{ $option }}" data-attendance-status-option="{{ $student->student_id }}" @checked($status === $option)></td>
                         @endforeach
                         <td><input class="form-control" name="remarks[{{ $student->student_id }}]" value="{{ $saved->remarks ?? '' }}"></td>
                     </tr>
@@ -101,7 +102,7 @@
             </table>
         </div>
         <div class="teacher-save-bar">
-            <button class="btn btn-primary" @disabled($students->isEmpty() || !$subjectId || !$assignment)>Save Attendance</button>
+            <button type="submit" class="btn btn-primary" @disabled($students->isEmpty() || !$subjectId || !$assignment)>Save Attendance</button>
         </div>
     </form>
 </section>

@@ -17,7 +17,8 @@ class TeacherController extends Controller
         $search = trim((string) $request->query('q', ''));
 
         return view('teachers.index', [
-            'teachers' => User::where('role', 'teacher')
+            'teachers' => User::withTrashed()
+                ->where('role', 'teacher')
                 ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
                     $query->where('employee_id', 'like', "%{$search}%")
                         ->orWhere('first_name', 'like', "%{$search}%")
@@ -50,6 +51,7 @@ class TeacherController extends Controller
         $duplicate = User::where('role', 'teacher')
             ->where('first_name', $data['first_name'])
             ->where('last_name', $data['last_name'])
+            ->withTrashed()
             ->exists();
 
         if ($duplicate) {
@@ -85,10 +87,48 @@ class TeacherController extends Controller
     {
         abort_unless($teacher->role === 'teacher', 404);
         $oldValues = $teacher->only(['employee_id', 'first_name', 'last_name', 'email', 'status']);
-        AuditLog::record('teacher_deleted', "Deleted teacher {$teacher->employee_id}: {$teacher->last_name}, {$teacher->first_name}", $teacher, $oldValues, null);
+        $teacher->forceFill(['status' => 'inactive'])->save();
         $teacher->delete();
+        AuditLog::record('teacher_archived', "Archived teacher {$teacher->employee_id}: {$teacher->last_name}, {$teacher->first_name}", $teacher, $oldValues, $teacher->only(['employee_id', 'first_name', 'last_name', 'email', 'status']));
 
-        return back()->with('success', 'Teacher deleted.');
+        return back()->with('success', 'Teacher archived. Historical reports will still show this teacher.');
+    }
+
+    public function updateStatus(Request $request, User $teacher): RedirectResponse
+    {
+        abort_unless($teacher->role === 'teacher', 404);
+
+        $data = $request->validate([
+            'status' => ['required', 'in:active,inactive'],
+        ]);
+
+        $oldValues = $teacher->only(['status']);
+        $teacher->forceFill(['status' => $data['status']])->save();
+        AuditLog::record('teacher_status_updated', "Updated status for teacher {$teacher->employee_id}: {$teacher->status}", $teacher, $oldValues, $teacher->only(['status']));
+
+        return back()->with('success', 'Teacher status updated.');
+    }
+
+    public function restore(string $teacher): RedirectResponse
+    {
+        $teacher = User::withTrashed()
+            ->where('role', 'teacher')
+            ->findOrFail($teacher);
+
+        $oldValues = [
+            'status' => $teacher->status,
+            'deleted_at' => $teacher->deleted_at,
+        ];
+
+        $teacher->restore();
+        $teacher->forceFill(['status' => 'active'])->save();
+
+        AuditLog::record('teacher_restored', "Restored teacher {$teacher->employee_id}: {$teacher->last_name}, {$teacher->first_name}", $teacher, $oldValues, [
+            'status' => $teacher->status,
+            'deleted_at' => $teacher->deleted_at,
+        ]);
+
+        return back()->with('success', 'Teacher restored and marked active.');
     }
 
     public function resetPassword(User $teacher): RedirectResponse

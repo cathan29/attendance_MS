@@ -20,6 +20,8 @@ class DatabaseSeeder extends Seeder
         $schoolYear = now()->year . '-' . now()->copy()->addYear()->year;
         $studentYear = (string) now()->year;
         $curriculum = config('curriculum');
+        $semester = '1st Semester';
+        $semesterDates = config("school.semesters.{$semester}", []);
 
         User::updateOrCreate([
             'employee_id' => 'ADMIN-001',
@@ -126,7 +128,9 @@ class DatabaseSeeder extends Seeder
                     'year_level' => $yearLevel,
                     'section' => $section,
                     'school_year' => $schoolYear,
-                    'semester' => '1st Semester',
+                    'semester' => $semester,
+                    'semester_start_date' => $semesterDates['start_date'] ?? null,
+                    'semester_end_date' => $semesterDates['end_date'] ?? null,
                 ]));
             }
         }

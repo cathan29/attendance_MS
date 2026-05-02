@@ -181,7 +181,7 @@ class ReportController extends Controller
             'subjects' => SubjectModel::orderBy('subject_name')->get(),
             'students' => Student::with('strand')->orderBy('last_name')->orderBy('first_name')->get(),
             'strands' => Strand::orderBy('strand_name')->get(),
-            'sections' => ['A', 'B', 'C', 'D', 'E', 'F'],
+            'sections' => config('school.sections', ['A', 'B', 'C', 'D', 'E', 'F']),
             'filters' => compact('dateFrom', 'dateTo', 'subjectId'),
             'summary' => compact(
                 'total',

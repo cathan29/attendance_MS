@@ -35,7 +35,12 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/dashboard', [DashboardController::class, 'admin'])->name('dashboard');
     Route::resource('students', StudentController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::resource('teachers', TeacherController::class)->only(['index', 'store', 'destroy']);
+    Route::patch('/teachers/{teacher}/status', [TeacherController::class, 'updateStatus'])->name('teachers.status');
+    Route::post('/teachers/{teacher}/restore', [TeacherController::class, 'restore'])->name('teachers.restore');
     Route::post('/teachers/{teacher}/reset-password', [TeacherController::class, 'resetPassword'])->name('teachers.reset-password');
+    Route::post('/curriculum/subjects', [CurriculumController::class, 'storeSubject'])->name('curriculum.subjects.store');
+    Route::put('/curriculum/subjects/{curriculumSubject}', [CurriculumController::class, 'updateSubject'])->name('curriculum.subjects.update');
+    Route::delete('/curriculum/subjects/{curriculumSubject}', [CurriculumController::class, 'destroySubject'])->name('curriculum.subjects.destroy');
     Route::resource('curriculum', CurriculumController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::resource('schedules', ClassScheduleController::class)->only(['index', 'store', 'destroy']);
     Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');

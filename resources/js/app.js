@@ -1,15 +1,7 @@
 import './bootstrap';
 
 document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.toast-notice').forEach((toast) => {
-        const close = () => {
-            toast.classList.add('is-hiding');
-            setTimeout(() => toast.remove(), 200);
-        };
-
-        toast.querySelector('.toast-close')?.addEventListener('click', close);
-        setTimeout(close, 4200);
-    });
+    bindToasts();
 
     const requiredModal = document.querySelector('[data-required-modal]');
     if (requiredModal) {
@@ -63,7 +55,68 @@ document.addEventListener('DOMContentLoaded', () => {
     loadUpcomingClasses();
     loadWeatherData();
 
-    document.querySelectorAll('[data-live-search]').forEach((input) => {
+    bindLiveSearch();
+    bindAjaxAttendance();
+});
+
+function bindToasts(root = document) {
+    root.querySelectorAll('.toast-notice').forEach((toast) => {
+        if (toast.dataset.boundToast) {
+            return;
+        }
+
+        toast.dataset.boundToast = 'true';
+        const close = () => {
+            toast.classList.add('is-hiding');
+            setTimeout(() => toast.remove(), 200);
+        };
+
+        toast.querySelector('.toast-close')?.addEventListener('click', close);
+        setTimeout(close, 4200);
+    });
+}
+
+function showToast(type, message) {
+    let stack = document.querySelector('.toast-stack');
+    if (!stack) {
+        stack = document.createElement('div');
+        stack.className = 'toast-stack';
+        stack.setAttribute('aria-live', 'polite');
+        stack.setAttribute('aria-atomic', 'true');
+        document.body.appendChild(stack);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `toast-notice ${type === 'danger' ? 'toast-danger' : 'toast-success'}`;
+    toast.setAttribute('role', type === 'danger' ? 'alert' : 'status');
+    toast.innerHTML = `
+        <span class="toast-dot"></span>
+        <div>
+            <strong>${type === 'danger' ? 'Action needed' : 'Success'}</strong>
+            <p>${escapeHtml(message)}</p>
+        </div>
+        <button type="button" class="toast-close" aria-label="Close notification">x</button>
+    `;
+    stack.appendChild(toast);
+    bindToasts(stack);
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function bindLiveSearch(root = document) {
+    root.querySelectorAll('[data-live-search]').forEach((input) => {
+        if (input.dataset.boundLiveSearch) {
+            return;
+        }
+
+        input.dataset.boundLiveSearch = 'true';
         const targetSelector = input.dataset.liveSearchTarget;
         if (!targetSelector) {
             return;
@@ -85,7 +138,167 @@ document.addEventListener('DOMContentLoaded', () => {
         input.addEventListener('input', filter);
         filter();
     });
-});
+}
+
+function bindAjaxAttendance(root = document) {
+    const loadForm = root.querySelector('[data-attendance-load-form]');
+    const saveForm = root.querySelector('[data-attendance-save-form]');
+
+    if (loadForm && !loadForm.dataset.boundAjaxAttendance) {
+        loadForm.dataset.boundAjaxAttendance = 'true';
+
+        const loadClass = async () => {
+            const url = `${loadForm.action}?${new URLSearchParams(new FormData(loadForm)).toString()}`;
+            const panels = document.querySelectorAll('[data-attendance-filter-panel], [data-attendance-panel]');
+            panels.forEach((panel) => panel.classList.add('is-loading'));
+
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        'Accept': 'text/html',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error('Unable to load class.');
+                }
+
+                const html = await response.text();
+                const nextDocument = new DOMParser().parseFromString(html, 'text/html');
+                const nextFilterPanel = nextDocument.querySelector('[data-attendance-filter-panel]');
+                const nextAttendancePanel = nextDocument.querySelector('[data-attendance-panel]');
+                const currentFilterPanel = document.querySelector('[data-attendance-filter-panel]');
+                const currentAttendancePanel = document.querySelector('[data-attendance-panel]');
+
+                if (!nextFilterPanel || !nextAttendancePanel || !currentFilterPanel || !currentAttendancePanel) {
+                    throw new Error('Class view is incomplete.');
+                }
+
+                currentFilterPanel.replaceWith(nextFilterPanel);
+                currentAttendancePanel.replaceWith(nextAttendancePanel);
+                window.history.replaceState({}, '', url);
+                bindLiveSearch(document);
+                bindAjaxAttendance(document);
+            } catch (error) {
+                showToast('danger', error.message || 'Unable to load class.');
+            } finally {
+                document
+                    .querySelectorAll('[data-attendance-filter-panel], [data-attendance-panel]')
+                    .forEach((panel) => panel.classList.remove('is-loading'));
+            }
+        };
+
+        loadForm.querySelectorAll('[data-attendance-autoload]').forEach((field) => {
+            field.addEventListener('change', loadClass);
+        });
+
+        loadForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            loadClass();
+        });
+    }
+
+    if (saveForm && !saveForm.dataset.boundAjaxAttendance) {
+        saveForm.dataset.boundAjaxAttendance = 'true';
+
+        bindAttendanceStatusInputs(saveForm);
+        syncDuplicateAttendanceInputs(saveForm);
+        saveForm.addEventListener('input', () => syncDuplicateAttendanceInputs(saveForm));
+        saveForm.addEventListener('change', () => syncDuplicateAttendanceInputs(saveForm));
+
+        saveForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            syncDuplicateAttendanceInputs(saveForm);
+
+            const submitButton = saveForm.querySelector('[type="submit"]');
+            const originalText = submitButton?.textContent;
+            submitButton?.setAttribute('disabled', 'disabled');
+            if (submitButton) {
+                submitButton.textContent = 'Saving...';
+            }
+
+            try {
+                const response = await fetch(saveForm.action, {
+                    method: 'POST',
+                    body: new FormData(saveForm),
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    const message = data.message || Object.values(data.errors || {})[0]?.[0] || 'Unable to save attendance.';
+                    throw new Error(message);
+                }
+
+                showToast('success', data.message || 'Attendance saved successfully.');
+                if (data.redirect_url) {
+                    window.history.replaceState({}, '', data.redirect_url);
+                }
+            } catch (error) {
+                showToast('danger', error.message || 'Unable to save attendance.');
+            } finally {
+                if (submitButton) {
+                    submitButton.textContent = originalText || 'Save Attendance';
+                    submitButton.removeAttribute('disabled');
+                }
+            }
+        });
+    }
+}
+
+function bindAttendanceStatusInputs(form) {
+    form.querySelectorAll('[data-attendance-status-option]').forEach((input) => {
+        if (input.dataset.boundAttendanceStatus) {
+            return;
+        }
+
+        input.dataset.boundAttendanceStatus = 'true';
+        input.addEventListener('change', () => {
+            if (!input.checked) {
+                return;
+            }
+
+            const studentId = input.dataset.attendanceStatusOption;
+            const statusInput = form.querySelector(`[data-attendance-status-value="${studentId}"]`);
+            if (statusInput) {
+                statusInput.value = input.value;
+            }
+
+            form
+                .querySelectorAll(`[data-attendance-status-option="${studentId}"]`)
+                .forEach((option) => {
+                    option.checked = option.value === input.value;
+                });
+        });
+    });
+}
+
+function syncDuplicateAttendanceInputs(form) {
+    const inputsByName = new Map();
+    form.querySelectorAll('input[name^="remarks["]').forEach((input) => {
+        const inputs = inputsByName.get(input.name) || [];
+        inputs.push(input);
+        inputsByName.set(input.name, inputs);
+    });
+
+    inputsByName.forEach((inputs) => {
+        if (inputs.length < 2) {
+            return;
+        }
+
+        const focused = inputs.find((input) => input === document.activeElement);
+        const source = focused || inputs.find((input) => input.value.trim() !== '') || inputs[0];
+        inputs.forEach((input) => {
+            if (input !== source) {
+                input.value = source.value;
+            }
+        });
+    });
+}
 
 // Calendar Data Loader
 async function loadCalendarData() {

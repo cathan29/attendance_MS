@@ -63,10 +63,19 @@
         </div>
         <div class="col-md-3">
             <label class="form-label">Semester</label>
-            <select class="form-select" name="semester" required>
-                <option>1st Semester</option>
-                <option>2nd Semester</option>
+            <select class="form-select" name="semester" data-semester-select required>
+                @foreach($semesters as $semesterName => $dates)
+                    <option value="{{ $semesterName }}" data-start-date="{{ $dates['start_date'] ?? '' }}" data-end-date="{{ $dates['end_date'] ?? '' }}">{{ $semesterName }}</option>
+                @endforeach
             </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Semester Start</label>
+            <input class="form-control" type="date" name="semester_start_date" data-semester-start value="{{ $semesters['1st Semester']['start_date'] ?? '' }}" required>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Semester End</label>
+            <input class="form-control" type="date" name="semester_end_date" data-semester-end value="{{ $semesters['1st Semester']['end_date'] ?? '' }}" required>
         </div>
         <div class="col-md-3 d-flex align-items-end">
             <button class="btn btn-primary w-100">Save Assignment</button>
@@ -137,8 +146,10 @@
                                                     <label>
                                                         <span>Teacher</span>
                                                         <select class="form-select" name="teacher_id" required>
-                                                            @foreach($teachers as $teacher)
-                                                                <option value="{{ $teacher->id }}" @selected($assignment->teacher_id === $teacher->id)>{{ $teacher->last_name }}, {{ $teacher->first_name }}</option>
+                                                            @foreach($allTeachers as $teacher)
+                                                                <option value="{{ $teacher->id }}" @selected($assignment->teacher_id === $teacher->id)>
+                                                                    {{ $teacher->last_name }}, {{ $teacher->first_name }}{{ $teacher->trashed() ? ' (Archived)' : ($teacher->status === 'inactive' ? ' (Inactive)' : '') }}
+                                                                </option>
                                                             @endforeach
                                                         </select>
                                                     </label>
@@ -158,10 +169,19 @@
                                                     </label>
                                                     <label>
                                                         <span>Semester</span>
-                                                        <select class="form-select" name="semester" required>
-                                                            <option @selected($assignment->semester === '1st Semester')>1st Semester</option>
-                                                            <option @selected($assignment->semester === '2nd Semester')>2nd Semester</option>
+                                                        <select class="form-select" name="semester" data-semester-select required>
+                                                            @foreach($semesters as $semesterName => $dates)
+                                                                <option value="{{ $semesterName }}" data-start-date="{{ $dates['start_date'] ?? '' }}" data-end-date="{{ $dates['end_date'] ?? '' }}" @selected($assignment->semester === $semesterName)>{{ $semesterName }}</option>
+                                                            @endforeach
                                                         </select>
+                                                    </label>
+                                                    <label>
+                                                        <span>Start</span>
+                                                        <input class="form-control" type="date" name="semester_start_date" data-semester-start value="{{ optional($assignment->semester_start_date)->toDateString() }}" required>
+                                                    </label>
+                                                    <label>
+                                                        <span>End</span>
+                                                        <input class="form-control" type="date" name="semester_end_date" data-semester-end value="{{ optional($assignment->semester_end_date)->toDateString() }}" required>
                                                     </label>
                                                     <button class="btn btn-sm btn-primary">Save</button>
                                                 </form>
@@ -231,6 +251,112 @@
 
 <section class="panel mb-4">
     <div class="section-title">
+        <h2>Curriculum Subjects</h2>
+        <span class="chip-light">Add, edit, or remove active curriculum subjects</span>
+    </div>
+    <form method="POST" action="{{ route('admin.curriculum.subjects.store') }}" class="row g-3 mb-4">
+        @csrf
+        <div class="col-md-3">
+            <label class="form-label">Strand</label>
+            <select class="form-select" name="strand_id" required>
+                @foreach($strands as $strand)
+                    <option value="{{ $strand->id }}">{{ $strand->strand_name }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Grade</label>
+            <select class="form-select" name="year_level" required>
+                <option>11</option>
+                <option>12</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Subject</label>
+            <input class="form-control" name="subject_name" list="subjectNameOptions" required>
+        </div>
+        <div class="col-md-3 d-flex align-items-end">
+            <button class="btn btn-primary w-100">Add Subject</button>
+        </div>
+    </form>
+    <datalist id="subjectNameOptions">
+        @foreach($subjects as $subject)
+            <option value="{{ $subject->subject_name }}"></option>
+        @endforeach
+    </datalist>
+
+    <form method="GET" action="{{ route('admin.curriculum.index') }}" class="row g-3 mb-3">
+        <div class="col-md-4">
+            <label class="form-label">Filter by Strand</label>
+            <select class="form-select" name="curriculum_strand_id">
+                <option value="">All strands</option>
+                @foreach($strands as $strand)
+                    <option value="{{ $strand->id }}" @selected($curriculumFilters['strand_id'] === $strand->id)>{{ $strand->strand_name }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Filter by Grade</label>
+            <select class="form-select" name="curriculum_grade">
+                <option value="">All grades</option>
+                <option value="11" @selected($curriculumFilters['grade'] === '11')>Grade 11</option>
+                <option value="12" @selected($curriculumFilters['grade'] === '12')>Grade 12</option>
+            </select>
+        </div>
+        <div class="col-md-3 d-flex align-items-end">
+            <button class="btn btn-outline-primary w-100">Apply Filter</button>
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <a class="btn btn-outline-primary w-100" href="{{ route('admin.curriculum.index') }}">Clear</a>
+        </div>
+    </form>
+
+    <p class="meta-line mb-3">Showing up to 10 curriculum subjects per page. Use filters to focus on ABM, STEM, TVL, HUMSS, or GAS.</p>
+
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead><tr><th>Strand</th><th>Grade</th><th>Subject</th><th></th></tr></thead>
+            <tbody id="curriculumSubjectRows">
+            @forelse($curriculumManageItems as $item)
+                <tr>
+                    <td>
+                        <form id="curriculum-subject-{{ $item->id }}" method="POST" action="{{ route('admin.curriculum.subjects.update', $item) }}">
+                            @csrf @method('PUT')
+                            <select class="form-select form-select-sm" name="strand_id" required>
+                                @foreach($strands as $strand)
+                                    <option value="{{ $strand->id }}" @selected($item->strand_id === $strand->id)>{{ $strand->strand_name }}</option>
+                                @endforeach
+                            </select>
+                        </form>
+                    </td>
+                    <td>
+                        <select class="form-select form-select-sm" name="year_level" form="curriculum-subject-{{ $item->id }}" required>
+                            <option @selected($item->year_level === '11')>11</option>
+                            <option @selected($item->year_level === '12')>12</option>
+                        </select>
+                    </td>
+                    <td>
+                        <input class="form-control form-control-sm" name="subject_name" form="curriculum-subject-{{ $item->id }}" list="subjectNameOptions" value="{{ $item->subject->subject_name }}" required>
+                    </td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-primary" form="curriculum-subject-{{ $item->id }}">Save</button>
+                        <form method="POST" action="{{ route('admin.curriculum.subjects.destroy', $item) }}" class="d-inline" onsubmit="return confirm('Remove this subject from the active curriculum? Existing class loads and attendance records will remain.')">
+                            @csrf @method('DELETE')
+                            <button class="btn btn-sm btn-outline-danger">Remove from Curriculum</button>
+                        </form>
+                    </td>
+                </tr>
+            @empty
+                <tr><td colspan="4" class="text-center empty-state py-4">No curriculum subjects yet.</td></tr>
+            @endforelse
+            </tbody>
+        </table>
+    </div>
+    {{ $curriculumManageItems->links() }}
+</section>
+
+<section class="panel mb-4">
+    <div class="section-title">
         <h2>SHS Curriculum Guide</h2>
         <span class="chip-light">Different subjects per strand</span>
     </div>
@@ -277,7 +403,12 @@
                     <td><span class="record-name">{{ $assignment->teacher->last_name }}, {{ $assignment->teacher->first_name }}</span><span class="meta-line">{{ $assignment->teacher->employee_id }}</span></td>
                     <td>{{ $assignment->subject->subject_name }}</td>
                     <td>Grade {{ $assignment->year_level }} {{ $assignment->strand->strand_name }}-{{ $assignment->section }}</td>
-                    <td>{{ $assignment->school_year }} / {{ $assignment->semester }}</td>
+                    <td>
+                        {{ $assignment->school_year }} / {{ $assignment->semester }}
+                        @if($assignment->semester_start_date && $assignment->semester_end_date)
+                            <span class="meta-line">{{ $assignment->semester_start_date->format('M d, Y') }} - {{ $assignment->semester_end_date->format('M d, Y') }}</span>
+                        @endif
+                    </td>
                     <td class="text-end">
                         <form method="POST" action="{{ route('admin.curriculum.destroy', $assignment) }}" onsubmit="return confirm('Remove this assignment?')">
                             @csrf @method('DELETE')
@@ -298,6 +429,19 @@
         const gradeSelect = document.querySelector('[data-curriculum-grade]');
         const subjectSelect = document.querySelector('[data-curriculum-subject]');
         const subjectOptions = Array.from(subjectSelect.options);
+        const syncSemesterDates = (select) => {
+            const form = select.closest('form');
+            const selected = select.selectedOptions[0];
+            const startInput = form?.querySelector('[data-semester-start]');
+            const endInput = form?.querySelector('[data-semester-end]');
+
+            if (!selected || !startInput || !endInput) {
+                return;
+            }
+
+            startInput.value = selected.dataset.startDate || startInput.value;
+            endInput.value = selected.dataset.endDate || endInput.value;
+        };
 
         const filterSubjects = () => {
             const strand = strandSelect.selectedOptions[0]?.dataset.strand;
@@ -370,6 +514,13 @@
 
         strandSelect.addEventListener('change', filterSubjects);
         gradeSelect.addEventListener('change', filterSubjects);
+        document.querySelectorAll('[data-semester-select]').forEach((select) => {
+            select.addEventListener('change', () => syncSemesterDates(select));
+
+            if (!select.closest('form')?.querySelector('[data-semester-start]')?.value) {
+                syncSemesterDates(select);
+            }
+        });
         filterSubjects();
     });
 </script>

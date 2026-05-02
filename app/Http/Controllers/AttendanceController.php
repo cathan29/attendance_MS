@@ -10,6 +10,7 @@ use App\Models\Strand;
 use App\Models\Student;
 use App\Models\SubjectModel;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -53,7 +54,7 @@ class AttendanceController extends Controller
         return view('attendance.take', compact('assignments', 'assignment', 'assignmentId', 'students', 'subjectId', 'attendanceDate', 'schedules', 'schedule'));
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): RedirectResponse|JsonResponse
     {
         $data = $request->validate([
             'assignment_id' => ['required', 'exists:class_assignments,id'],
@@ -77,6 +78,12 @@ class AttendanceController extends Controller
                 ->firstOrFail();
 
             if ((int) $schedule->day_of_week !== (int) \Carbon\Carbon::parse($data['attendance_date'])->dayOfWeekIso) {
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'message' => 'Selected schedule does not match the attendance date.',
+                    ], 422);
+                }
+
                 return back()
                     ->withErrors(['class_schedule_id' => 'Selected schedule does not match the attendance date.'])
                     ->withInput();
@@ -126,6 +133,17 @@ class AttendanceController extends Controller
                 }
             }
         });
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Attendance saved successfully.',
+                'redirect_url' => route('teacher.attendance.create', [
+                    'assignment_id' => $data['assignment_id'],
+                    'attendance_date' => $data['attendance_date'],
+                    'class_schedule_id' => $data['class_schedule_id'] ?? null,
+                ]),
+            ]);
+        }
 
         return redirect()
             ->route('teacher.attendance.create', ['assignment_id' => $data['assignment_id'], 'attendance_date' => $data['attendance_date'], 'class_schedule_id' => $data['class_schedule_id'] ?? null])

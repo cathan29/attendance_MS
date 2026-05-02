@@ -7,12 +7,11 @@ use App\Models\Student;
 use App\Models\AuditLog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class StudentController extends Controller
 {
-    private const SECTIONS = ['A', 'B', 'C', 'D', 'E', 'F'];
-
     public function index(Request $request): View
     {
         $search = trim((string) $request->query('q', ''));
@@ -34,7 +33,7 @@ class StudentController extends Controller
             'students' => $students,
             'studentsBySection' => $students->groupBy(fn (Student $student) => $student->strand->strand_name . '|' . $student->year_level . '|' . $student->section),
             'strands' => Strand::orderBy('strand_name')->get(),
-            'sections' => self::SECTIONS,
+            'sections' => $this->sections(),
             'search' => $search,
             'nextStudentId' => $this->nextStudentId(),
         ]);
@@ -50,7 +49,7 @@ class StudentController extends Controller
             'last_name' => ['required', 'string', 'max:100', 'regex:/^[A-Za-zÑñ .\'-]+$/'],
             'strand_id' => ['required', 'exists:strands,id'],
             'year_level' => ['required', 'in:11,12'],
-            'section' => ['required', 'in:' . implode(',', self::SECTIONS)],
+            'section' => ['required', Rule::in($this->sections())],
         ]);
 
         $duplicate = Student::where('first_name', $data['first_name'])
@@ -84,7 +83,7 @@ class StudentController extends Controller
             'last_name' => ['required', 'string', 'max:100', 'regex:/^[A-Za-zÑñ .\'-]+$/'],
             'strand_id' => ['required', 'exists:strands,id'],
             'year_level' => ['required', 'in:11,12'],
-            'section' => ['required', 'in:' . implode(',', self::SECTIONS)],
+            'section' => ['required', Rule::in($this->sections())],
         ]);
 
         $duplicate = Student::whereKeyNot($student->student_id)
@@ -143,5 +142,10 @@ class StudentController extends Controller
             'last_name' => trim((string) $request->input('last_name')),
             'section' => strtoupper(trim((string) $request->input('section'))),
         ]);
+    }
+
+    private function sections(): array
+    {
+        return config('school.sections', ['A', 'B', 'C', 'D', 'E', 'F']);
     }
 }
