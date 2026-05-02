@@ -26,10 +26,10 @@ class DatabaseSeeder extends Seeder
         User::updateOrCreate([
             'employee_id' => 'ADMIN-001',
         ], [
-            'first_name' => 'System',
+            'first_name' => 'Sergs Rafael',
             'middle_name' => null,
-            'last_name' => 'Administrator',
-            'email' => 'admin@cipheracademy.edu',
+            'last_name' => 'Oriel',
+            'email' => 'sergs@cipheracademy.edu',
             'password' => Hash::make('Admin@123'),
             'role' => 'admin',
             'status' => 'active',
@@ -37,14 +37,15 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $teachers = collect([
-            ['CA-T-001', 'Maria', 'Santos', 'maria.santos@cipheracademy.edu', 'Cipher@1001'],
-            ['CA-T-002', 'Jose', 'Reyes', 'jose.reyes@cipheracademy.edu', 'Cipher@1002'],
-            ['CA-T-003', 'Ana', 'Cruz', 'ana.cruz@cipheracademy.edu', 'Cipher@1003'],
-            ['CA-T-004', 'Ramon', 'Garcia', 'ramon.garcia@cipheracademy.edu', 'Cipher@1004'],
-            ['CA-T-005', 'Leah', 'Flores', 'leah.flores@cipheracademy.edu', 'Cipher@1005'],
-            ['CA-T-006', 'Paolo', 'Navarro', 'paolo.navarro@cipheracademy.edu', 'Cipher@1006'],
-            ['CA-T-007', 'Clarissa', 'Mendoza', 'clarissa.mendoza@cipheracademy.edu', 'Cipher@1007'],
-            ['CA-T-008', 'Victor', 'Torres', 'victor.torres@cipheracademy.edu', 'Cipher@1008'],
+            ['CA-T-001', 'Dianne', 'Ramirez', 'dianne.ramirez@cipheracademy.edu', 'Cipher@1001'],
+            ['CA-T-002', 'John Kurt', 'Bayangat', 'johnkurt.bayangat@cipheracademy.edu', 'Cipher@1002'],
+            ['CA-T-003', 'Mark Anthony', 'Ortega', 'markanthony.ortega@cipheracademy.edu', 'Cipher@1003'],
+            ['CA-T-004', 'Jhustyn Jhay', 'Datuin', 'jhustynjhay.datuin@cipheracademy.edu', 'Cipher@1004'],
+            ['CA-T-005', 'Adrian', 'Montemayor', 'adrian.montemayor@cipheracademy.edu', 'Cipher@1005'],
+            ['CA-T-006', 'Rodel', 'Mamaril', 'rodel.mamaril@cipheracademy.edu', 'Cipher@1006'],
+            ['CA-T-007', 'Jimar', 'Esmeria', 'jimar.esmeria@cipheracademy.edu', 'Cipher@1007'],
+            ['CA-T-008', 'Leslie', 'Sabangan', 'leslie.sabangan@cipheracademy.edu', 'Cipher@1008'],
+            ['CA-T-009', 'Jasmine', 'Miranda', 'jasmine.miranda@cipheracademy.edu', 'Cipher@1009'],
         ])->map(function (array $teacher) {
             return User::updateOrCreate([
                 'employee_id' => $teacher[0],
