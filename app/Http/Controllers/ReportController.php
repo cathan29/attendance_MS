@@ -69,10 +69,10 @@ class ReportController extends Controller
             ->select(
                 'attendance_date',
                 DB::raw('COUNT(*) as total'),
-                DB::raw("SUM(status = 'Present') as present_count"),
-                DB::raw("SUM(status = 'Late') as late_count"),
-                DB::raw("SUM(status = 'Absent') as absent_count"),
-                DB::raw("ROUND(((SUM(status = 'Present') + SUM(status = 'Late')) / COUNT(*)) * 100, 1) as attendance_rate")
+                DB::raw("SUM(CASE WHEN status = 'Present' THEN 1 ELSE 0 END) as present_count"),
+                DB::raw("SUM(CASE WHEN status = 'Late' THEN 1 ELSE 0 END) as late_count"),
+                DB::raw("SUM(CASE WHEN status = 'Absent' THEN 1 ELSE 0 END) as absent_count"),
+                DB::raw("ROUND(((SUM(CASE WHEN status = 'Present' THEN 1 ELSE 0 END) + SUM(CASE WHEN status = 'Late' THEN 1 ELSE 0 END)) * 100.0 / COUNT(*)), 1) as attendance_rate")
             )
             ->groupBy('attendance_date')
             ->orderBy('attendance_date')
@@ -92,10 +92,10 @@ class ReportController extends Controller
             ->select(
                 'subjects.subject_name',
                 DB::raw('COUNT(*) as total'),
-                DB::raw("SUM(attendances.status = 'Present') as present_count"),
-                DB::raw("SUM(attendances.status = 'Late') as late_count"),
-                DB::raw("SUM(attendances.status = 'Absent') as absent_count"),
-                DB::raw("ROUND(((SUM(attendances.status = 'Present') + SUM(attendances.status = 'Late')) / COUNT(*)) * 100, 1) as attendance_rate")
+                DB::raw("SUM(CASE WHEN attendances.status = 'Present' THEN 1 ELSE 0 END) as present_count"),
+                DB::raw("SUM(CASE WHEN attendances.status = 'Late' THEN 1 ELSE 0 END) as late_count"),
+                DB::raw("SUM(CASE WHEN attendances.status = 'Absent' THEN 1 ELSE 0 END) as absent_count"),
+                DB::raw("ROUND(((SUM(CASE WHEN attendances.status = 'Present' THEN 1 ELSE 0 END) + SUM(CASE WHEN attendances.status = 'Late' THEN 1 ELSE 0 END)) * 100.0 / COUNT(*)), 1) as attendance_rate")
             )
             ->groupBy('subjects.subject_name')
             ->orderBy('attendance_rate')
@@ -119,10 +119,10 @@ class ReportController extends Controller
                 'students.year_level',
                 'students.section',
                 DB::raw('COUNT(*) as total'),
-                DB::raw("SUM(attendances.status = 'Present') as present_count"),
-                DB::raw("SUM(attendances.status = 'Late') as late_count"),
-                DB::raw("SUM(attendances.status = 'Absent') as absent_count"),
-                DB::raw("ROUND(((SUM(attendances.status = 'Present') + SUM(attendances.status = 'Late')) / COUNT(*)) * 100, 1) as attendance_rate")
+                DB::raw("SUM(CASE WHEN attendances.status = 'Present' THEN 1 ELSE 0 END) as present_count"),
+                DB::raw("SUM(CASE WHEN attendances.status = 'Late' THEN 1 ELSE 0 END) as late_count"),
+                DB::raw("SUM(CASE WHEN attendances.status = 'Absent' THEN 1 ELSE 0 END) as absent_count"),
+                DB::raw("ROUND(((SUM(CASE WHEN attendances.status = 'Present' THEN 1 ELSE 0 END) + SUM(CASE WHEN attendances.status = 'Late' THEN 1 ELSE 0 END)) * 100.0 / COUNT(*)), 1) as attendance_rate")
             )
             ->groupBy('strands.strand_name', 'students.year_level', 'students.section')
             ->orderBy('attendance_rate')
@@ -138,11 +138,20 @@ class ReportController extends Controller
             ->limit(8)
             ->get();
 
-        $weekdayBreakdown = (clone $base)
-            ->selectRaw('DAYNAME(attendance_date) as weekday, WEEKDAY(attendance_date) as weekday_index, count(*) as total')
-            ->groupBy('weekday', 'weekday_index')
-            ->orderBy('weekday_index')
-            ->get();
+        $driver = DB::connection()->getDriverName();
+        $weekdayBreakdownQuery = (clone $base);
+        if ($driver === 'pgsql') {
+            $weekdayBreakdownQuery
+                ->selectRaw("TO_CHAR(attendance_date, 'FMDay') as weekday, ((EXTRACT(DOW FROM attendance_date)::int + 6) % 7) as weekday_index, count(*) as total")
+                ->groupByRaw("TO_CHAR(attendance_date, 'FMDay'), ((EXTRACT(DOW FROM attendance_date)::int + 6) % 7)")
+                ->orderBy('weekday_index');
+        } else {
+            $weekdayBreakdownQuery
+                ->selectRaw('DAYNAME(attendance_date) as weekday, WEEKDAY(attendance_date) as weekday_index, count(*) as total')
+                ->groupBy('weekday', 'weekday_index')
+                ->orderBy('weekday_index');
+        }
+        $weekdayBreakdown = $weekdayBreakdownQuery->get();
 
         $atRiskStudents = (clone $base)
             ->join('students', 'students.student_id', '=', 'attendances.student_id')
@@ -152,12 +161,12 @@ class ReportController extends Controller
                 'students.last_name',
                 'students.year_level',
                 'students.section',
-                DB::raw("SUM(attendances.status = 'Absent') as absent_count"),
-                DB::raw("SUM(attendances.status = 'Late') as late_count"),
+                DB::raw("SUM(CASE WHEN attendances.status = 'Absent' THEN 1 ELSE 0 END) as absent_count"),
+                DB::raw("SUM(CASE WHEN attendances.status = 'Late' THEN 1 ELSE 0 END) as late_count"),
                 DB::raw('COUNT(*) as total')
             )
             ->groupBy('students.student_id', 'students.first_name', 'students.last_name', 'students.year_level', 'students.section')
-            ->havingRaw("SUM(attendances.status = 'Absent') > 0 OR SUM(attendances.status = 'Late') > 1")
+            ->havingRaw("SUM(CASE WHEN attendances.status = 'Absent' THEN 1 ELSE 0 END) > 0 OR SUM(CASE WHEN attendances.status = 'Late' THEN 1 ELSE 0 END) > 1")
             ->orderByDesc('absent_count')
             ->orderByDesc('late_count')
             ->limit(10)
@@ -166,14 +175,14 @@ class ReportController extends Controller
             ->join('students', 'students.student_id', '=', 'attendances.student_id')
             ->select('students.student_id')
             ->groupBy('students.student_id')
-            ->havingRaw("SUM(attendances.status = 'Absent') = 0 AND SUM(attendances.status = 'Late') = 0")
+            ->havingRaw("SUM(CASE WHEN attendances.status = 'Absent' THEN 1 ELSE 0 END) = 0 AND SUM(CASE WHEN attendances.status = 'Late' THEN 1 ELSE 0 END) = 0")
             ->get()
             ->count();
         $criticalStudents = (clone $base)
             ->join('students', 'students.student_id', '=', 'attendances.student_id')
             ->select('students.student_id')
             ->groupBy('students.student_id')
-            ->havingRaw("SUM(attendances.status = 'Absent') >= 2 OR SUM(attendances.status = 'Late') >= 3")
+            ->havingRaw("SUM(CASE WHEN attendances.status = 'Absent' THEN 1 ELSE 0 END) >= 2 OR SUM(CASE WHEN attendances.status = 'Late' THEN 1 ELSE 0 END) >= 3")
             ->get()
             ->count();
 

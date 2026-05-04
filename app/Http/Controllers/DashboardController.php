@@ -45,10 +45,10 @@ class DashboardController extends Controller
                 'students.year_level',
                 'students.section',
                 'strands.strand_name',
-                DB::raw("SUM(attendances.status = 'Absent') as absent_count"),
-                DB::raw("SUM(attendances.status = 'Late') as late_count"),
+                DB::raw("SUM(CASE WHEN attendances.status = 'Absent' THEN 1 ELSE 0 END) as absent_count"),
+                DB::raw("SUM(CASE WHEN attendances.status = 'Late' THEN 1 ELSE 0 END) as late_count"),
                 DB::raw("COUNT(*) as total_records"),
-                DB::raw("(SUM(attendances.status = 'Absent') * 3) + SUM(attendances.status = 'Late') as risk_score")
+                DB::raw("(SUM(CASE WHEN attendances.status = 'Absent' THEN 1 ELSE 0 END) * 3) + SUM(CASE WHEN attendances.status = 'Late' THEN 1 ELSE 0 END) as risk_score")
             )
             ->groupBy('students.student_id', 'students.first_name', 'students.last_name', 'students.year_level', 'students.section', 'strands.strand_name')
             ->orderByDesc('risk_score')
