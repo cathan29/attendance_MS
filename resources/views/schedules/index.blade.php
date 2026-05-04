@@ -62,7 +62,7 @@
                     <td>{{ $schedule->assignment->teacher->last_name }}, {{ $schedule->assignment->teacher->first_name }}</td>
                     <td>{{ $schedule->room ?: 'TBA' }}</td>
                     <td class="text-end">
-                        <form method="POST" action="{{ route('admin.schedules.destroy', $schedule) }}" onsubmit="return confirm('Delete this schedule?')">
+                            <form method="POST" action="{{ route('admin.schedules.destroy', $schedule) }}" data-confirm="Delete this schedule?" class="d-inline">
                             @csrf @method('DELETE')
                             <button class="btn btn-sm btn-outline-danger">Delete</button>
                         </form>

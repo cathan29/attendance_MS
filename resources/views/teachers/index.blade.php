@@ -72,7 +72,7 @@
                     @if($teacher->trashed())
                         <span class="meta-line">Restore first</span>
                     @else
-                        <form method="POST" action="{{ route('admin.teachers.reset-password', $teacher) }}" onsubmit="return confirm('Reset password for this teacher?')">
+                        <form method="POST" action="{{ route('admin.teachers.reset-password', $teacher) }}" data-confirm="Reset password for this teacher?">
                             @csrf
                             <button class="btn btn-sm btn-outline-primary">Reset Password</button>
                         </form>
@@ -80,12 +80,12 @@
                 </td>
                 <td class="text-end">
                     @if($teacher->trashed())
-                        <form method="POST" action="{{ route('admin.teachers.restore', $teacher->id) }}" onsubmit="return confirm('Restore this teacher and mark as active?')">
+                        <form method="POST" action="{{ route('admin.teachers.restore', $teacher->id) }}" data-confirm="Restore this teacher and mark as active?">
                             @csrf
                             <button class="btn btn-sm btn-outline-primary">Restore</button>
                         </form>
                     @else
-                        <form method="POST" action="{{ route('admin.teachers.destroy', $teacher) }}" onsubmit="return confirm('Archive this teacher? Historical reports will still keep their name.')">
+                        <form method="POST" action="{{ route('admin.teachers.destroy', $teacher) }}" data-confirm="Archive this teacher? Historical reports will still keep their name.">
                             @csrf @method('DELETE')
                             <button class="btn btn-sm btn-outline-danger">Archive</button>
                         </form>

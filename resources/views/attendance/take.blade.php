@@ -42,7 +42,7 @@
     </form>
 </section>
 <section class="panel teacher-attendance-panel" data-attendance-panel>
-    <form method="POST" action="{{ route('teacher.attendance.store') }}" data-attendance-save-form>
+    <form method="POST" action="{{ route('teacher.attendance.store') }}" data-attendance-save-form data-confirm="Are you sure you want to save attendance for this class and date?">
         @csrf
         <input type="hidden" name="assignment_id" value="{{ $assignmentId }}">
         <input type="hidden" name="subject_id" value="{{ $subjectId }}">
