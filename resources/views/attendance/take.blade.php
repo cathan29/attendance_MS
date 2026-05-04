@@ -12,8 +12,15 @@
             <label class="form-label">Assigned Class</label>
             <select class="form-select" name="assignment_id" required data-attendance-autoload>
                 @foreach($assignments as $item)
+                    @php($doneAt = $assignmentCompletion[$item->id] ?? null)
                     <option value="{{ $item->id }}" @selected($assignmentId === $item->id)>
+                        @if($doneAt)
+                            ✓
+                        @endif
                         {{ $item->subject->subject_name }} / Grade {{ $item->year_level }} {{ $item->strand->strand_name }}-{{ $item->section }}
+                        @if($doneAt)
+                            ({{ $doneAt->timezone(config('app.timezone'))->format('h:i A') }})
+                        @endif
                     </option>
                 @endforeach
             </select>
@@ -70,7 +77,7 @@
                     <div class="attendance-segment">
                         @foreach(['Present', 'Late', 'Absent'] as $option)
                             <label class="{{ strtolower($option) }}">
-                                <input type="radio" name="visual_status_card[{{ $student->student_id }}]" value="{{ $option }}" data-attendance-status-option="{{ $student->student_id }}" @checked($status === $option)>
+                                <input type="radio" name="visual_status_card[{{ $student->student_id }}]" value="{{ $option }}" data-attendance-status-option="{{ $student->student_id }}" @checked($saved && $status === $option)>
                                 <span>{{ $option }}</span>
                             </label>
                         @endforeach
@@ -91,7 +98,7 @@
                     <tr>
                         <td><span class="student-name">{{ $student->last_name }}, {{ $student->first_name }}</span><span class="meta-line">{{ $student->student_id }} / {{ $student->year_level }}-{{ $student->section }}</span></td>
                         @foreach(['Present', 'Late', 'Absent'] as $option)
-                            <td><input class="form-check-input" type="radio" name="visual_status_table[{{ $student->student_id }}]" value="{{ $option }}" data-attendance-status-option="{{ $student->student_id }}" @checked($status === $option)></td>
+                            <td><input class="form-check-input" type="radio" name="visual_status_table[{{ $student->student_id }}]" value="{{ $option }}" data-attendance-status-option="{{ $student->student_id }}" @checked($saved && $status === $option)></td>
                         @endforeach
                         <td><input class="form-control" name="remarks[{{ $student->student_id }}]" value="{{ $saved->remarks ?? '' }}"></td>
                     </tr>

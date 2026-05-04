@@ -51,7 +51,24 @@ class AttendanceController extends Controller
             ->orderBy('last_name')
             ->get();
 
-        return view('attendance.take', compact('assignments', 'assignment', 'assignmentId', 'students', 'subjectId', 'attendanceDate', 'schedules', 'schedule'));
+        $completedByClassKey = Attendance::query()
+            ->selectRaw('attendances.subject_id, students.strand_id, students.year_level, students.section, MAX(attendances.updated_at) as last_saved_at')
+            ->join('students', 'students.student_id', '=', 'attendances.student_id')
+            ->where('attendances.teacher_id', Auth::id())
+            ->whereDate('attendances.attendance_date', $attendanceDate)
+            ->groupBy('attendances.subject_id', 'students.strand_id', 'students.year_level', 'students.section')
+            ->get()
+            ->mapWithKeys(function ($row) {
+                $key = $row->subject_id . '|' . $row->strand_id . '|' . $row->year_level . '|' . $row->section;
+                return [$key => \Carbon\Carbon::parse($row->last_saved_at)];
+            });
+
+        $assignmentCompletion = $assignments->mapWithKeys(function (ClassAssignment $item) use ($completedByClassKey) {
+            $key = $item->subject_id . '|' . $item->strand_id . '|' . $item->year_level . '|' . $item->section;
+            return [$item->id => $completedByClassKey->get($key)];
+        })->all();
+
+        return view('attendance.take', compact('assignments', 'assignment', 'assignmentId', 'students', 'subjectId', 'attendanceDate', 'schedules', 'schedule', 'assignmentCompletion'));
     }
 
     public function store(Request $request): RedirectResponse|JsonResponse
@@ -97,8 +114,14 @@ class AttendanceController extends Controller
             ->pluck('student_id')
             ->all();
 
-        DB::transaction(function () use ($data, $allowedStudentIds) {
+        $savedCount = 0;
+
+        DB::transaction(function () use ($data, $allowedStudentIds, &$savedCount) {
             foreach ($data['status'] as $studentId => $status) {
+                // PHP casts numeric-looking array keys (e.g. "2026001") to int.
+                // Our `students.student_id` is stored as string, so normalize here to prevent strict compare mismatches.
+                $studentId = (string) $studentId;
+
                 if (!in_array($studentId, $allowedStudentIds, true)) {
                     continue;
                 }
@@ -121,6 +144,8 @@ class AttendanceController extends Controller
                     'remarks' => $data['remarks'][$studentId] ?? null,
                 ]);
 
+                $savedCount++;
+
                 $newValues = $attendance->only(['status', 'remarks', 'teacher_id']);
                 if (!$existing || $oldValues !== $newValues) {
                     AuditLog::record(
@@ -133,6 +158,16 @@ class AttendanceController extends Controller
                 }
             }
         });
+
+        if ($savedCount === 0) {
+            $message = 'No valid attendance records were saved. Please reload the class and try again.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message], 422);
+            }
+
+            return back()->withErrors(['status' => $message])->withInput();
+        }
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -172,10 +207,11 @@ class AttendanceController extends Controller
 
         return response()->streamDownload(function () use ($records) {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ['Date', 'Student ID', 'Student', 'Class', 'Subject', 'Teacher', 'Status', 'Remarks']);
+            fputcsv($out, ['Date', 'Saved At', 'Student ID', 'Student', 'Class', 'Subject', 'Teacher', 'Status', 'Remarks']);
             foreach ($records as $record) {
                 fputcsv($out, [
                     $record->attendance_date->toDateString(),
+                    $record->updated_at?->timezone(config('app.timezone'))->format('Y-m-d h:i A'),
                     $record->student_id,
                     $record->student->last_name . ', ' . $record->student->first_name,
                     $record->student->year_level . '-' . $record->student->section,
