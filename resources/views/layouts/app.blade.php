@@ -139,7 +139,7 @@
             </div>
             <div class="account-actions">
                 <span class="role-chip">{{ ucfirst($role) }}</span>
-                <form method="POST" action="{{ route('logout') }}">
+                <form method="POST" action="{{ route('logout') }}" data-confirm="Are you sure you want to logout?">
                     @csrf
                     <button class="logout-button" title="Logout">
                         <span class="logout-icon" aria-hidden="true">

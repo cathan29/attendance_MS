@@ -24,11 +24,12 @@
 <section class="panel">
     <div class="table-responsive">
         <table class="table align-middle" id="attendanceRecords">
-            <thead><tr><th>Date</th><th>Student</th><th>Class</th><th>Subject</th><th>Teacher</th><th>Status</th><th>Remarks</th></tr></thead>
+            <thead><tr><th>Date</th><th>Saved</th><th>Student</th><th>Class</th><th>Subject</th><th>Teacher</th><th>Status</th><th>Remarks</th></tr></thead>
             <tbody>
             @forelse($records as $record)
                 <tr>
                     <td>{{ $record->attendance_date->toDateString() }}</td>
+                    <td>{{ $record->updated_at?->timezone(config('app.timezone'))->format('h:i A') }}</td>
                     <td><span class="record-name">{{ $record->student->last_name }}, {{ $record->student->first_name }}</span><span class="meta-line">{{ $record->student_id }}</span></td>
                     <td>{{ $record->student->year_level }}-{{ $record->student->section }}</td>
                     <td>{{ $record->subject->subject_name }}</td>
@@ -37,7 +38,7 @@
                     <td>{{ $record->remarks }}</td>
                 </tr>
             @empty
-                <tr><td colspan="7" class="text-center empty-state py-4">No records found.</td></tr>
+                <tr><td colspan="8" class="text-center empty-state py-4">No records found.</td></tr>
             @endforelse
             </tbody>
         </table>

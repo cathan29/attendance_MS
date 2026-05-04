@@ -146,7 +146,7 @@
                     <td><span class="badge text-bg-secondary">{{ $student->strand->strand_name }}</span></td>
                     <td>Grade {{ $student->year_level }} - {{ $student->section }}</td>
                     <td class="text-end">
-                        <form method="POST" action="{{ route('admin.students.destroy', $student) }}" onsubmit="return confirm('Delete this student?')">
+                        <form method="POST" action="{{ route('admin.students.destroy', $student) }}" data-confirm="Delete this student?">
                             @csrf @method('DELETE')
                             <button class="btn btn-sm btn-outline-danger">Delete</button>
                         </form>

@@ -340,7 +340,7 @@
                     </td>
                     <td class="text-end">
                         <button class="btn btn-sm btn-primary" form="curriculum-subject-{{ $item->id }}">Save</button>
-                        <form method="POST" action="{{ route('admin.curriculum.subjects.destroy', $item) }}" class="d-inline" onsubmit="return confirm('Remove this subject from the active curriculum? Existing class loads and attendance records will remain.')">
+                        <form method="POST" action="{{ route('admin.curriculum.subjects.destroy', $item) }}" class="d-inline" data-confirm="Remove this subject from the active curriculum? Existing class loads and attendance records will remain.">
                             @csrf @method('DELETE')
                             <button class="btn btn-sm btn-outline-danger">Remove from Curriculum</button>
                         </form>
@@ -410,7 +410,7 @@
                         @endif
                     </td>
                     <td class="text-end">
-                        <form method="POST" action="{{ route('admin.curriculum.destroy', $assignment) }}" onsubmit="return confirm('Remove this assignment?')">
+                        <form method="POST" action="{{ route('admin.curriculum.destroy', $assignment) }}" data-confirm="Remove this assignment?" class="d-inline">
                             @csrf @method('DELETE')
                             <button class="btn btn-sm btn-outline-danger">Remove</button>
                         </form>

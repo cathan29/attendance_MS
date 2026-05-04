@@ -2,6 +2,7 @@ import './bootstrap';
 
 document.addEventListener('DOMContentLoaded', () => {
     bindToasts();
+    bindConfirmations();
     registerPwa();
     bindInstallPrompt();
     bindConnectionState();
@@ -65,6 +66,161 @@ document.addEventListener('DOMContentLoaded', () => {
     bindAjaxAdminPanels();
     bindGlobalAjaxPanelNavigation();
 });
+
+function ensureConfirmModal() {
+    let backdrop = document.querySelector('[data-confirm-backdrop]');
+    if (backdrop) {
+        return backdrop;
+    }
+
+    backdrop = document.createElement('div');
+    backdrop.className = 'section-modal-backdrop';
+    backdrop.dataset.confirmBackdrop = 'true';
+    backdrop.hidden = true;
+
+    backdrop.innerHTML = `
+        <div class="section-modal confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmMessage">
+            <div class="section-modal-head">
+                <div>
+                    <h2 id="confirmTitle">Confirm</h2>
+                </div>
+                <button type="button" class="section-modal-close" data-confirm-cancel aria-label="Close">x</button>
+            </div>
+            <div class="section-modal-body">
+                <p class="text-muted" id="confirmMessage" style="margin: 0 0 16px;"></p>
+                <div class="d-flex gap-2 justify-content-end">
+                    <button type="button" class="btn btn-outline-primary" data-confirm-cancel>Cancel</button>
+                    <button type="button" class="btn btn-primary" data-confirm-ok>Yes, continue</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(backdrop);
+
+    const cancelButtons = backdrop.querySelectorAll('[data-confirm-cancel]');
+    cancelButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+            backdrop.dispatchEvent(new CustomEvent('confirm:cancel'));
+        });
+    });
+
+    backdrop.addEventListener('click', (event) => {
+        if (event.target === backdrop) {
+            backdrop.dispatchEvent(new CustomEvent('confirm:cancel'));
+        }
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (!backdrop.hidden && event.key === 'Escape') {
+            backdrop.dispatchEvent(new CustomEvent('confirm:cancel'));
+        }
+    });
+
+    return backdrop;
+}
+
+function openConfirmModal({
+    title = 'Confirm',
+    message = 'Are you sure?',
+    confirmText = 'Yes, continue',
+    cancelText = 'Cancel',
+} = {}) {
+    const backdrop = ensureConfirmModal();
+    const titleEl = backdrop.querySelector('#confirmTitle');
+    const messageEl = backdrop.querySelector('#confirmMessage');
+    const okButton = backdrop.querySelector('[data-confirm-ok]');
+    const cancelButtons = backdrop.querySelectorAll('[data-confirm-cancel]');
+    const cancelButton = cancelButtons[cancelButtons.length - 1];
+
+    if (titleEl) titleEl.textContent = title;
+    if (messageEl) messageEl.textContent = message;
+    if (okButton) okButton.textContent = confirmText;
+    if (cancelButton) cancelButton.textContent = cancelText;
+
+    backdrop.hidden = false;
+    document.body.classList.add('modal-open');
+
+    return new Promise((resolve) => {
+        let finished = false;
+
+        const cleanup = () => {
+            if (finished) return;
+            finished = true;
+            backdrop.hidden = true;
+            document.body.classList.remove('modal-open');
+            okButton?.removeEventListener('click', onOk);
+            backdrop.removeEventListener('confirm:cancel', onCancel);
+        };
+
+        const onOk = () => {
+            cleanup();
+            resolve(true);
+        };
+
+        const onCancel = () => {
+            cleanup();
+            resolve(false);
+        };
+
+        okButton?.addEventListener('click', onOk);
+        backdrop.addEventListener('confirm:cancel', onCancel, { once: true });
+
+        setTimeout(() => okButton?.focus(), 0);
+    });
+}
+
+function bindConfirmations(root = document) {
+    root.querySelectorAll('[data-confirm]').forEach((element) => {
+        if (element.dataset.boundConfirm) {
+            return;
+        }
+
+        element.dataset.boundConfirm = 'true';
+        const message = element.dataset.confirm;
+        if (!message) {
+            return;
+        }
+
+        if (element.tagName === 'FORM') {
+            element.addEventListener('submit', async (event) => {
+                if (element.dataset.confirmBypassed === 'true') {
+                    element.dataset.confirmBypassed = 'false';
+                    return;
+                }
+
+                // Let custom handlers (e.g. AJAX attendance save) manage confirmation themselves.
+                if (element.hasAttribute('data-attendance-save-form')) {
+                    return;
+                }
+
+                event.preventDefault();
+                event.stopPropagation();
+
+                const ok = await openConfirmModal({ message });
+                if (ok) {
+                    element.dataset.confirmBypassed = 'true';
+                    element.submit();
+                }
+            });
+            return;
+        }
+
+        element.addEventListener('click', async (event) => {
+            if (element.tagName !== 'A' || !element.href) {
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            const ok = await openConfirmModal({ message });
+            if (ok) {
+                window.location.href = element.href;
+            }
+        });
+    });
+}
 
 function bindToasts(root = document) {
     root.querySelectorAll('.toast-notice').forEach((toast) => {
@@ -627,6 +783,15 @@ function bindAjaxAttendance(root = document) {
 
         saveForm.addEventListener('submit', async (event) => {
             event.preventDefault();
+
+            const confirmMessage = saveForm.dataset.confirm;
+            if (confirmMessage) {
+                const ok = await openConfirmModal({ message: confirmMessage });
+                if (!ok) {
+                    return;
+                }
+            }
+
             syncDuplicateAttendanceInputs(saveForm);
 
             const submitButton = saveForm.querySelector('[type="submit"]');
